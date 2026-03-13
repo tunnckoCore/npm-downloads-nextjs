@@ -1,0 +1,61 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "extends": [
+    "./node_modules/ultracite/config/oxlint/core/.oxlintrc.json",
+    "./node_modules/ultracite/config/oxlint/react/.oxlintrc.json",
+    "./node_modules/ultracite/config/oxlint/next/.oxlintrc.json"
+  ],
+  "rules": {
+    "sort-keys": "off",
+    "no-inline-comments": "off",
+    "func-style": "off",
+    "max-statements": ["error", 60],
+    "no-plusplus": "off",
+    "no-unused-vars": "off",
+    "import/no-relative-parent-imports": "off",
+    "promise/avoid-new": "off",
+    "promise/prefer-await-to-then": "off",
+    "import/no-duplicates": "error",
+    "unicorn/no-array-for-each": "off",
+    "no-duplicate-imports": "off",
+    "@typescript-eslint/no-explicit-any": "off",
+    "complexity": ["error", 40],
+    "no-nested-ternary": "off",
+    "no-empty-function": "off",
+    "no-loop-func": "off",
+    "no-use-before-define": [
+      "error",
+      {
+        "classes": true,
+        "functions": false,
+        "variables": true
+      }
+    ],
+    "require-await": "off",
+    "unicorn/filename-case": "off",
+    "no-unsafe-optional-chaining": [
+      "error",
+      {
+        "disallowArithmeticOperators": true
+      }
+    ],
+    "no-warning-comments": "off",
+    "prefer-template": "error",
+    "func-names": ["error", "always"],
+    "no-unused-expressions": [
+      "warn",
+      {
+        "allowShortCircuit": false,
+        "allowTaggedTemplates": false,
+        "allowTernary": false
+      }
+    ],
+    "no-param-reassign": "off",
+    "unicorn/prefer-ternary": "off",
+    "unicorn/no-empty-file": "warn",
+    "unicorn/no-array-reduce": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "no-barrel-file": "off",
+    "node/global-require": "warn"
+  }
+}
