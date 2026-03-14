@@ -1,24 +1,11 @@
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { Suspense } from "react";
 
 import { PackagePageClient } from "@/components/package-page-client";
 import { decodePackageParam } from "@/lib/npm/routes";
 import { cachedPackageExists } from "@/lib/package-exists.server";
 
-export default function PackagePage({
-  params,
-}: {
-  params: Promise<{ package: string }>;
-}) {
-  return (
-    <Suspense fallback={null}>
-      <PackagePageContent params={params} />
-    </Suspense>
-  );
-}
-
-async function PackagePageContent({
+export default async function PackagePage({
   params,
 }: {
   params: Promise<{ package: string }>;

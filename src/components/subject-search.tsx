@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import { toast } from "sonner";
 
 import { ThemePresetSwitcher } from "@/components/theme-preset-switcher";
@@ -29,10 +35,11 @@ export function SubjectSearch({
   isLoading?: boolean;
   isSearchDisabled?: boolean;
   onCancel?: () => void;
-  onSearchStart?: () => void;
+  onSearchStart?: (searchType: "range" | "route") => void;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isSubmittingSearch, setIsSubmittingSearch] = useState(false);
   const defaults = useMemo(() => defaultDateRange(), []);
   const [queryState] = useQueryStates({
     from: parseAsString.withDefault(defaults.from),
@@ -61,25 +68,25 @@ export function SubjectSearch({
       const nextFrom = String(formData.get("from") ?? "").trim();
       const nextTo = String(formData.get("to") ?? "").trim();
       if (!nextPackage) {
-        return;
+        return false;
       }
 
       const from = nextFrom || queryState.from;
       const to = nextTo || queryState.to;
       if (from >= to) {
         toast.error("Start date must be earlier than end date.");
-        return;
+        return false;
       }
 
       try {
         const exists = await packageExists(nextPackage);
         if (!exists) {
           toast.error(`Package "${nextPackage}" was not found.`);
-          return;
+          return false;
         }
       } catch {
         toast.error("Could not validate the package right now.");
-        return;
+        return false;
       }
 
       if (
@@ -87,7 +94,7 @@ export function SubjectSearch({
         from === queryState.from &&
         to === queryState.to
       ) {
-        return;
+        return false;
       }
 
       const searchParams = new URLSearchParams({
@@ -97,11 +104,14 @@ export function SubjectSearch({
       });
       const nextHref = `/package/${encodePackagePath(nextPackage)}?${searchParams.toString()}`;
 
-      onSearchStart?.();
+      onSearchStart?.(
+        packageName && packageName !== nextPackage ? "route" : "range"
+      );
 
       startTransition(() => {
         navigateWithTransition(nextHref);
       });
+      return true;
     },
     [
       navigateWithTransition,
@@ -116,10 +126,25 @@ export function SubjectSearch({
   const handleSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      await submitToPackage(new FormData(event.currentTarget));
+      setIsSubmittingSearch(true);
+      const started = await submitToPackage(new FormData(event.currentTarget));
+      if (!started) {
+        setIsSubmittingSearch(false);
+      }
     },
     [submitToPackage]
   );
+
+  useEffect(() => {
+    if (isLoading && isSubmittingSearch) {
+      setIsSubmittingSearch(false);
+    }
+  }, [isLoading, isSubmittingSearch]);
+
+  const handleCancel = useCallback(() => {
+    setIsSubmittingSearch(false);
+    onCancel?.();
+  }, [onCancel]);
 
   const handleHomeClick = useCallback(
     (event: React.MouseEvent<HTMLAnchorElement>) => {
@@ -154,10 +179,10 @@ export function SubjectSearch({
         initialFrom={queryState.from}
         initialQuery={packageName ?? ""}
         initialTo={queryState.to}
-        isLoading={isLoading}
+        isLoading={isLoading || isSubmittingSearch}
         isSearchDisabled={isSearchDisabled}
         isPending={isPending}
-        onCancel={onCancel}
+        onCancel={handleCancel}
         onSubmit={handleSubmit}
       />
     </section>

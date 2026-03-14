@@ -406,7 +406,7 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
     [setQueryState]
   );
 
-  const handleSearchStart = useCallback(() => {
+  const handleSearchTransitionStart = useCallback(() => {
     setLoadingSource("search");
   }, []);
 
@@ -414,10 +414,10 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center gap-4">
       <SubjectSearch
         packageName={packageName}
-        isLoading={isStreaming && loadingSource === "search"}
+        isLoading={loadingSource === "search"}
         isSearchDisabled={isFirstPageLoad}
         onCancel={handleCancelLoading}
-        onSearchStart={handleSearchStart}
+        onSearchStart={handleSearchTransitionStart}
       />
 
       <section className="flex flex-col items-start justify-between gap-4 py-4 sm:flex-row sm:items-center">
