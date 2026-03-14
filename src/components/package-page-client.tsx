@@ -39,10 +39,6 @@ function buildBasePath(packageName: string) {
   return `/api/v1/package/${encodePackagePath(packageName)}`;
 }
 
-function formatLoadDuration(durationMs: number) {
-  return new Intl.NumberFormat("en-US").format(durationMs);
-}
-
 function makeDownloadsCacheKey(
   packageName: string,
   from: string,
@@ -87,13 +83,7 @@ const emptyPayload = (
   },
 });
 
-export function PackagePageClient({
-  packageName,
-  requestStartedAt,
-}: {
-  packageName: string;
-  requestStartedAt: number;
-}) {
+export function PackagePageClient({ packageName }: { packageName: string }) {
   const queryClient = useQueryClient();
   const defaults = useMemo(() => defaultDateRange(), []);
   const [queryState, setQueryState] = useQueryStates({
@@ -105,7 +95,6 @@ export function PackagePageClient({
   const [isStreaming, setIsStreaming] = useState(true);
   const [loadingSource, setLoadingSource] = useState<"interval" | "search" | null>(null);
   const [displayPayload, setDisplayPayload] = useState<PackageDownloadsPayload | null>(null);
-  const [loadDurationMs, setLoadDurationMs] = useState<number | null>(null);
   const displayPayloadRef = useRef<PackageDownloadsPayload | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const fallbackAbortRef = useRef<AbortController | null>(null);
@@ -113,7 +102,6 @@ export function PackagePageClient({
   const previousDisplayPayloadRef = useRef<PackageDownloadsPayload | null>(null);
   const restoreDownloadsKeyRef = useRef<string | null>(null);
   const completedPayloadsRef = useRef(new Map<string, PackageDownloadsPayload>());
-  const loadStartedAtRef = useRef(requestStartedAt);
 
   const downloadsQueryKey = useMemo(
     () =>
@@ -178,7 +166,6 @@ export function PackagePageClient({
       queryClient.setQueryData(downloadsQueryKey, payload);
       completedPayloadsRef.current.set(downloadsCacheKey, payload);
       setDisplayPayload(payload);
-      setLoadDurationMs(Math.max(0, Date.now() - loadStartedAtRef.current));
       setLoadingSource(null);
       setIsStreaming(false);
       setStreamError(null);
@@ -204,7 +191,6 @@ export function PackagePageClient({
       queryClient.setQueryData(downloadsQueryKey, payload);
       completedPayloadsRef.current.set(downloadsCacheKey, payload);
       setDisplayPayload(payload);
-      setLoadDurationMs(Math.max(0, Date.now() - loadStartedAtRef.current));
       setLoadingSource(null);
       setStreamError(null);
     } catch (error) {
@@ -275,11 +261,6 @@ export function PackagePageClient({
       setStreamError(null);
       return;
     }
-
-    loadStartedAtRef.current =
-      completedPayloadsRef.current.size === 0 && !displayPayloadRef.current
-        ? requestStartedAt
-        : Date.now();
 
     if (!current) {
       queryClient.setQueryData(
@@ -363,7 +344,6 @@ export function PackagePageClient({
     queryState.from,
     queryState.interval,
     queryState.to,
-    requestStartedAt,
     streamUrl,
   ]);
 
@@ -395,19 +375,18 @@ export function PackagePageClient({
     [setQueryState],
   );
 
-  const handleSearchStart = useCallback(() => {
+  const handleSearchTransitionStart = useCallback(() => {
     setLoadingSource("search");
   }, []);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center gap-4">
       <SubjectSearch
-        mode="results"
         packageName={packageName}
-        isLoading={isStreaming && loadingSource === "search"}
+        isLoading={loadingSource === "search"}
         isSearchDisabled={isFirstPageLoad}
         onCancel={handleCancelLoading}
-        onSearchStart={handleSearchStart}
+        onSearchStart={handleSearchTransitionStart}
       />
 
       <section className="flex flex-col items-start justify-between gap-4 py-4 sm:flex-row sm:items-center">
@@ -419,11 +398,11 @@ export function PackagePageClient({
               rel="noreferrer"
               className="inline-flex items-center gap-2 uppercase text-3xl font-extrabold tracking-tight text-foreground transition-colors hover:text-muted-foreground"
             >
-              {metadataQuery.data.name} <ArrowSquareOutIcon className="h-4 w-4" />
+              {metadataQuery.data.name?.toUpperCase()} <ArrowSquareOutIcon className="h-4 w-4" />
             </Link>
           ) : (
-            <h2 className="text-3xl font-extrabold tracking-tight text-foreground">
-              {packageName}
+            <h2 className="text-3xl font-extrabold uppercase tracking-tight text-foreground">
+              {packageName.toUpperCase()}
             </h2>
           )}
 
@@ -475,12 +454,6 @@ export function PackagePageClient({
               </Button>
             ))}
           </div>
-
-          {loadDurationMs === null ? null : (
-            <p className="text-xs text-muted-foreground justify-end">
-              Loaded in {formatLoadDuration(loadDurationMs)} ms
-            </p>
-          )}
         </div>
       </section>
 

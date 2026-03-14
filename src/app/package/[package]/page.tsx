@@ -1,28 +1,22 @@
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 
 import { PackagePageClient } from "@/components/package-page-client";
 import { decodePackageParam } from "@/lib/npm/routes";
-import { packageExists } from "@/lib/package-exists";
-
-export const dynamic = "force-dynamic";
+import { cachedPackageExists } from "@/lib/package-exists.server";
 
 export default async function PackagePage({
   params,
 }: {
   params: Promise<{ package: string }>;
 }) {
-  const requestStartedAt = Date.now();
+  await connection();
   const resolved = await params;
   const packageName = decodePackageParam(resolved.package);
 
-  if (!(await packageExists(packageName))) {
+  if (!(await cachedPackageExists(packageName))) {
     redirect("/");
   }
 
-  return (
-    <PackagePageClient
-      packageName={packageName}
-      requestStartedAt={requestStartedAt}
-    />
-  );
+  return <PackagePageClient packageName={packageName} />;
 }

@@ -6,7 +6,7 @@ import type { NextConfig } from "next";
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
-  // cacheComponents: true,
+  cacheComponents: true,
   cleanDistDir: true,
   reactStrictMode: true,
   outputFileTracingRoot: projectRoot,
