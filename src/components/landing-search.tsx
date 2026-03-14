@@ -25,25 +25,12 @@ export function LandingSearch() {
         </div>
       </div>
 
-      <form
-        action="/search"
-        className="mt-8 grid grid-cols-6 gap-2 md:grid-cols-12"
-        method="get"
-      >
+      <form action="/search" className="mt-8 grid grid-cols-6 gap-2 md:grid-cols-12" method="get">
         <div className="col-span-2 inline-flex border border-input bg-secondary/40">
-          <Button
-            type="button"
-            variant="ghost"
-            className="cursor-pointer p-0 px-4"
-            disabled
-          >
+          <Button type="button" variant="ghost" className="cursor-pointer p-0 px-4" disabled>
             Author
           </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            className="cursor-pointer p-0 px-4"
-          >
+          <Button type="button" variant="secondary" className="cursor-pointer p-0 px-4">
             Package
           </Button>
         </div>
@@ -70,7 +57,7 @@ export function LandingSearch() {
         />
         <Button
           type="submit"
-          className="col-span-2 cursor-pointer px-4 text-primary-foreground"
+          className="col-span-2 cursor-pointer px-4 text-primary-foreground border-primary"
         >
           Search
         </Button>
