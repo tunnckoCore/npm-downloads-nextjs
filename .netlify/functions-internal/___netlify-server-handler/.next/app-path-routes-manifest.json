@@ -1,0 +1,12 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/api/v1/package/[package]/downloads/route": "/api/v1/package/[package]/downloads",
+  "/api/v1/package/[package]/downloads/stream/route": "/api/v1/package/[package]/downloads/stream",
+  "/api/v1/package/[package]/route": "/api/v1/package/[package]",
+  "/favicon.ico/route": "/favicon.ico",
+  "/package/[package]/page": "/package/[package]",
+  "/page": "/",
+  "/search/route": "/search",
+  "/theme-presets/[preset]/route": "/theme-presets/[preset]"
+}

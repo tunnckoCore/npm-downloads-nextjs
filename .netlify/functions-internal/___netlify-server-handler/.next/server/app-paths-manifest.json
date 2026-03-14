@@ -1,0 +1,12 @@
+{
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/v1/package/[package]/downloads/route": "app/api/v1/package/[package]/downloads/route.js",
+  "/api/v1/package/[package]/downloads/stream/route": "app/api/v1/package/[package]/downloads/stream/route.js",
+  "/api/v1/package/[package]/route": "app/api/v1/package/[package]/route.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/package/[package]/page": "app/package/[package]/page.js",
+  "/page": "app/page.js",
+  "/search/route": "app/search/route.js",
+  "/theme-presets/[preset]/route": "app/theme-presets/[preset]/route.js"
+}

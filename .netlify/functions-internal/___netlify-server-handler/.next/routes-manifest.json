@@ -1,0 +1,115 @@
+{
+  "version": 3,
+  "pages404": true,
+  "appType": "app",
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "priority": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/api/v1/package/[package]",
+      "regex": "^/api/v1/package/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpackage": "nxtPpackage"
+      },
+      "namedRegex": "^/api/v1/package/(?<nxtPpackage>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/v1/package/[package]/downloads",
+      "regex": "^/api/v1/package/([^/]+?)/downloads(?:/)?$",
+      "routeKeys": {
+        "nxtPpackage": "nxtPpackage"
+      },
+      "namedRegex": "^/api/v1/package/(?<nxtPpackage>[^/]+?)/downloads(?:/)?$"
+    },
+    {
+      "page": "/api/v1/package/[package]/downloads/stream",
+      "regex": "^/api/v1/package/([^/]+?)/downloads/stream(?:/)?$",
+      "routeKeys": {
+        "nxtPpackage": "nxtPpackage"
+      },
+      "namedRegex": "^/api/v1/package/(?<nxtPpackage>[^/]+?)/downloads/stream(?:/)?$"
+    },
+    {
+      "page": "/package/[package]",
+      "regex": "^/package/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpackage": "nxtPpackage"
+      },
+      "namedRegex": "^/package/(?<nxtPpackage>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/theme-presets/[preset]",
+      "regex": "^/theme\\-presets/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpreset": "nxtPpreset"
+      },
+      "namedRegex": "^/theme\\-presets/(?<nxtPpreset>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_global-error",
+      "regex": "^/_global\\-error(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_global\\-error(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/favicon.ico",
+      "regex": "^/favicon\\.ico(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/favicon\\.ico(?:/)?$"
+    },
+    {
+      "page": "/search",
+      "regex": "^/search(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/search(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments",
+    "clientParamParsing": false,
+    "dynamicRSCPrerender": false
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}
