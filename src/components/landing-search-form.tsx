@@ -1,14 +1,19 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { defaultDateRange } from "@/lib/npm/date";
 import { encodePackagePath } from "@/lib/npm/routes";
-import { packageExists } from "@/lib/package-exists";
 
 function navigateWithTransition(
   router: ReturnType<typeof useRouter>,
@@ -34,6 +39,20 @@ export function LandingSearchForm() {
     query: "",
     to: defaults.to,
   });
+  const href = useMemo(() => {
+    const packageName = formState.query.trim();
+    if (!packageName || formState.from >= formState.to) {
+      return null;
+    }
+
+    const searchParams = new URLSearchParams({
+      from: formState.from,
+      to: formState.to,
+      interval: "monthly",
+    });
+
+    return `/package/${encodePackagePath(packageName)}?${searchParams.toString()}`;
+  }, [formState.from, formState.query, formState.to]);
 
   const handleFieldChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,43 +65,38 @@ export function LandingSearchForm() {
     []
   );
 
+  useEffect(() => {
+    if (!href) {
+      return;
+    }
+
+    router.prefetch(href);
+  }, [href, router]);
+
   const handleSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
 
-      const packageName = formState.query.trim();
+      const { from, query, to } = formState;
+      const packageName = query.trim();
       if (!packageName) {
         return;
       }
 
-      if (formState.from >= formState.to) {
+      if (from >= to) {
         toast.error("Start date must be earlier than end date.");
         return;
       }
 
-      try {
-        const exists = await packageExists(packageName);
-        if (!exists) {
-          toast.error(`Package "${packageName}" was not found.`);
-          return;
-        }
-      } catch {
-        toast.error("Could not validate the package right now.");
+      if (!href) {
         return;
       }
-
-      const searchParams = new URLSearchParams({
-        from: formState.from,
-        to: formState.to,
-        interval: "monthly",
-      });
-      const href = `/package/${encodePackagePath(packageName)}?${searchParams.toString()}`;
 
       startTransition(() => {
         navigateWithTransition(router, href);
       });
     },
-    [formState.from, formState.query, formState.to, router]
+    [formState, href, router]
   );
 
   return (

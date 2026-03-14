@@ -1,6 +1,6 @@
 export const THEME_STORAGE_KEY = "npm-downloads-theme";
 export const THEME_COOKIE_KEY = "npm-downloads-theme";
-export const DEFAULT_THEME_PRESET = "amethyst-haze";
+export const DEFAULT_THEME_PRESET = "t3chat";
 export const THEME_PRESET_LINK_ID = "theme-preset-stylesheet";
 
 export const THEME_PRESETS = [
@@ -50,11 +50,15 @@ export function applyThemePreset(preset: ThemePreset) {
   }
 
   window.localStorage.setItem(THEME_STORAGE_KEY, preset);
-  window.cookieStore?.set({
-    name: THEME_COOKIE_KEY,
-    value: preset,
-    path: "/",
-    sameSite: "lax",
-    expires: Date.now() + 31_536_000_000,
-  });
+  if (window.cookieStore) {
+    window.cookieStore
+      .set({
+        name: THEME_COOKIE_KEY,
+        value: preset,
+        path: "/",
+        sameSite: "lax",
+        expires: Date.now() + 31_536_000_000,
+      })
+      .catch(() => {});
+  }
 }

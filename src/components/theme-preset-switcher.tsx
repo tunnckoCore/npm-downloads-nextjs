@@ -9,6 +9,7 @@ import {
 import {
   applyThemePreset,
   DEFAULT_THEME_PRESET,
+  isThemePreset,
   THEME_PRESETS,
   THEME_STORAGE_KEY,
 } from "@/lib/theme-presets";
@@ -21,10 +22,19 @@ export function ThemePresetSwitcher() {
     const datasetPreset = document.documentElement.dataset.theme as
       | ThemePreset
       | undefined;
-    const storedPreset = window.localStorage.getItem(
-      THEME_STORAGE_KEY
-    ) as ThemePreset | null;
-    const nextPreset = datasetPreset ?? storedPreset ?? DEFAULT_THEME_PRESET;
+    const storedPreset = window.localStorage.getItem(THEME_STORAGE_KEY);
+    const storedThemePreset = isThemePreset(storedPreset ?? "")
+      ? (storedPreset as ThemePreset)
+      : null;
+    let nextPreset: ThemePreset = DEFAULT_THEME_PRESET;
+
+    if (datasetPreset && isThemePreset(datasetPreset)) {
+      nextPreset = datasetPreset;
+    }
+
+    if (storedThemePreset) {
+      nextPreset = storedThemePreset;
+    }
 
     applyThemePreset(nextPreset);
     setPreset(nextPreset);
