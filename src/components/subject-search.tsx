@@ -13,14 +13,10 @@ import { Input } from "@/components/ui/input";
 import { defaultDateRange } from "@/lib/npm/date";
 import { encodePackagePath } from "@/lib/npm/routes";
 import { INTERVALS } from "@/lib/npm/types";
-import type { Interval } from "@/lib/npm/types";
 import { packageExists } from "@/lib/package-exists";
 import { cn } from "@/lib/utils";
 
-type SearchMode = "landing" | "results";
-
 export function SubjectSearch({
-  mode,
   packageName,
   className,
   isLoading = false,
@@ -28,7 +24,6 @@ export function SubjectSearch({
   onCancel,
   onSearchStart,
 }: {
-  mode: SearchMode;
   packageName?: string;
   className?: string;
   isLoading?: boolean;
@@ -87,21 +82,20 @@ export function SubjectSearch({
         return;
       }
 
-      const searchParams = new URLSearchParams({
-        from,
-        to,
-        interval: queryState.interval,
-      });
-      const nextHref = `/package/${encodePackagePath(nextPackage)}?${searchParams.toString()}`;
-
       if (
-        mode === "results" &&
         packageName === nextPackage &&
         from === queryState.from &&
         to === queryState.to
       ) {
         return;
       }
+
+      const searchParams = new URLSearchParams({
+        from,
+        to,
+        interval: queryState.interval,
+      });
+      const nextHref = `/package/${encodePackagePath(nextPackage)}?${searchParams.toString()}`;
 
       onSearchStart?.();
 
@@ -110,7 +104,6 @@ export function SubjectSearch({
       });
     },
     [
-      mode,
       navigateWithTransition,
       onSearchStart,
       packageName,
@@ -130,14 +123,10 @@ export function SubjectSearch({
 
   const handleHomeClick = useCallback(
     (event: React.MouseEvent<HTMLAnchorElement>) => {
-      if (mode !== "results") {
-        return;
-      }
-
       event.preventDefault();
       navigateWithTransition("/");
     },
-    [mode, navigateWithTransition]
+    [navigateWithTransition]
   );
 
   return (
@@ -165,13 +154,11 @@ export function SubjectSearch({
         initialFrom={queryState.from}
         initialQuery={packageName ?? ""}
         initialTo={queryState.to}
-        interval={queryState.interval}
-        mode={mode}
         isLoading={isLoading}
         isSearchDisabled={isSearchDisabled}
         isPending={isPending}
         onCancel={onCancel}
-        onSubmit={mode === "results" ? handleSubmit : undefined}
+        onSubmit={handleSubmit}
       />
     </section>
   );
@@ -181,8 +168,6 @@ function SearchForm({
   initialFrom,
   initialQuery,
   initialTo,
-  interval,
-  mode,
   isLoading,
   isSearchDisabled,
   isPending,
@@ -192,8 +177,6 @@ function SearchForm({
   initialFrom: string;
   initialQuery: string;
   initialTo: string;
-  interval: Interval;
-  mode: SearchMode;
   isLoading: boolean;
   isSearchDisabled: boolean;
   isPending: boolean;
@@ -217,50 +200,17 @@ function SearchForm({
     []
   );
 
-  const isActiveLoading = isLoading;
-
   return (
     <form
-      action={mode === "landing" ? "/search" : undefined}
       className="mt-8 grid grid-cols-6 gap-2 md:grid-cols-12"
-      method={mode === "landing" ? "get" : undefined}
       onSubmit={onSubmit}
     >
-      {mode === "landing" ? (
-        <div className="col-span-2 inline-flex border border-input bg-secondary/40">
-          <Button
-            type="button"
-            variant="ghost"
-            className="cursor-pointer p-0 px-4"
-            disabled
-          >
-            Author
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            className="cursor-pointer p-0 px-4"
-          >
-            Package
-          </Button>
-        </div>
-      ) : null}
-
-      {mode === "landing" ? (
-        <input type="hidden" name="interval" value={interval} />
-      ) : null}
-
       <Input
         name="query"
         placeholder="npm package name"
         value={formState.query}
         onChange={handleFieldChange}
-        className={cn(
-          "cursor-pointer bg-background",
-          mode === "landing"
-            ? "col-span-4 md:col-span-4"
-            : "col-span-6 md:col-span-6"
-        )}
+        className={cn("col-span-6 cursor-pointer bg-background md:col-span-6")}
       />
       <Input
         name="from"
@@ -276,7 +226,7 @@ function SearchForm({
         onChange={handleFieldChange}
         className="col-span-2 cursor-pointer bg-background [&::-webkit-calendar-picker-indicator]:cursor-pointer"
       />
-      {isActiveLoading ? (
+      {isLoading ? (
         <Button
           key="cancel"
           type="button"
@@ -291,7 +241,7 @@ function SearchForm({
           key="search"
           type="submit"
           className="col-span-2 cursor-pointer border-primary"
-          disabled={isSearchDisabled || (isPending && mode !== "results")}
+          disabled={isSearchDisabled || isPending}
         >
           Search
         </Button>

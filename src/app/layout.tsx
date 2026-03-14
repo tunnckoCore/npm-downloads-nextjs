@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
+import { Suspense } from "react";
 
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
@@ -11,6 +12,7 @@ import {
   THEME_COOKIE_KEY,
   THEME_PRESET_LINK_ID,
 } from "@/lib/theme-presets";
+import type { ThemePreset } from "@/lib/theme-presets";
 
 import "./globals.css";
 
@@ -29,11 +31,36 @@ export const metadata: Metadata = {
   description: "Analyze and visualize download stats for npm packages.",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  return (
+    <html
+      lang="en"
+      className="dark"
+      data-theme={DEFAULT_THEME_PRESET}
+      suppressHydrationWarning
+    >
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-background text-foreground antialiased`}
+      >
+        <Suspense
+          fallback={
+            <RuntimeTree initialThemePreset={DEFAULT_THEME_PRESET}>
+              {children}
+            </RuntimeTree>
+          }
+        >
+          <CookieBoundRuntime>{children}</CookieBoundRuntime>
+        </Suspense>
+      </body>
+    </html>
+  );
+}
+
+async function CookieBoundRuntime({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
   const storedThemePreset = cookieStore.get(THEME_COOKIE_KEY)?.value;
   const initialThemePreset =
@@ -42,26 +69,31 @@ export default async function RootLayout({
       : DEFAULT_THEME_PRESET;
 
   return (
-    <html
-      lang="en"
-      className="dark"
-      data-theme={initialThemePreset}
-      suppressHydrationWarning
-    >
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-background text-foreground antialiased`}
-      >
-        <link
-          id={THEME_PRESET_LINK_ID}
-          rel="stylesheet"
-          href={getThemePresetHref(initialThemePreset)}
-          precedence="default"
-        />
-        <Providers>
-          {children}
-          <Toaster position="top-center" />
-        </Providers>
-      </body>
-    </html>
+    <RuntimeTree initialThemePreset={initialThemePreset}>
+      {children}
+    </RuntimeTree>
+  );
+}
+
+function RuntimeTree({
+  children,
+  initialThemePreset,
+}: {
+  children: React.ReactNode;
+  initialThemePreset: ThemePreset;
+}) {
+  return (
+    <>
+      <link
+        id={THEME_PRESET_LINK_ID}
+        rel="stylesheet"
+        href={getThemePresetHref(initialThemePreset)}
+        precedence="default"
+      />
+      <Providers>
+        {children}
+        <Toaster position="top-center" />
+      </Providers>
+    </>
   );
 }

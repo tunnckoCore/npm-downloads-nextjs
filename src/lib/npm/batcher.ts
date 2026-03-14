@@ -1,3 +1,5 @@
+import { cacheLife, cacheTag } from "next/cache";
+
 import {
   aggregateSeries,
   summarizeSeries,
@@ -158,40 +160,56 @@ function chunkPackagesForWindow(packages: string[], window: ShardWindow) {
 async function fetchWindowChunk(packages: string[], window: ShardWindow) {
   const batchKey = `${window.key}:${packages.toSorted().join(",")}`;
 
-  return withInflightBatch(batchKey, async () => {
-    if (packages.length === 1) {
-      try {
-        const response = await fetchSingleWindow(packages[0], window);
-        return {
-          [response.package]: toShard(response, "single"),
-        } satisfies Record<string, PackageHistoryShard>;
-      } catch (error) {
-        if (!isRecoverableBoundaryError(error)) {
-          throw error;
-        }
+  return withInflightBatch(batchKey, () =>
+    fetchWindowChunkCached(packages.toSorted(), window)
+  );
+}
 
-        const response = await recoverSingleWindow(
-          packages[0],
-          window,
-          error as NpmUpstreamError
-        );
-        return {
-          [response.package]: toShard(response, "single"),
-        } satisfies Record<string, PackageHistoryShard>;
+async function fetchWindowChunkCached(
+  packages: string[],
+  window: ShardWindow
+): Promise<Record<string, PackageHistoryShard>> {
+  "use cache";
+
+  cacheLife("hours");
+  cacheTag(
+    ...packages.flatMap((packageName) => [
+      `package:${packageName}`,
+      `package-window:${packageName}:${window.from}:${window.to}`,
+    ])
+  );
+
+  if (packages.length === 1) {
+    try {
+      const response = await fetchSingleWindow(packages[0], window);
+      return {
+        [response.package]: toShard(response, "single"),
+      } satisfies Record<string, PackageHistoryShard>;
+    } catch (error) {
+      if (!isRecoverableBoundaryError(error)) {
+        throw error;
       }
+
+      const response = await recoverSingleWindow(
+        packages[0],
+        window,
+        error as NpmUpstreamError
+      );
+      return {
+        [response.package]: toShard(response, "single"),
+      } satisfies Record<string, PackageHistoryShard>;
     }
+  }
 
-    const url = buildUrl(packages, window);
-    const response =
-      await fetchJsonWithRetry<BulkPackageDownloadsResponse>(url);
-    const shardMap: Record<string, PackageHistoryShard> = {};
+  const url = buildUrl(packages, window);
+  const response = await fetchJsonWithRetry<BulkPackageDownloadsResponse>(url);
+  const shardMap: Record<string, PackageHistoryShard> = {};
 
-    for (const [packageName, payload] of Object.entries(response)) {
-      shardMap[packageName] = toShard(payload, "bulk");
-    }
+  for (const [packageName, payload] of Object.entries(response)) {
+    shardMap[packageName] = toShard(payload, "bulk");
+  }
 
-    return shardMap;
-  });
+  return shardMap;
 }
 
 async function hydrateWindow(window: ShardWindow, packages: string[]) {

@@ -39,15 +39,11 @@ function buildBasePath(packageName: string) {
   return `/api/v1/package/${encodePackagePath(packageName)}`;
 }
 
-function formatLoadDuration(durationMs: number) {
-  return new Intl.NumberFormat("en-US").format(durationMs);
-}
-
 function makeDownloadsCacheKey(
   packageName: string,
   from: string,
   to: string,
-  interval: PackageDownloadsPayload["interval"],
+  interval: PackageDownloadsPayload["interval"]
 ) {
   return ["package-downloads", packageName, from, to, interval].join(":");
 }
@@ -68,7 +64,7 @@ const emptyPayload = (
   packageName: string,
   from: string,
   to: string,
-  interval: PackageDownloadsPayload["interval"],
+  interval: PackageDownloadsPayload["interval"]
 ): PackageDownloadsPayload => ({
   packageName,
   range: { from, to },
@@ -87,13 +83,7 @@ const emptyPayload = (
   },
 });
 
-export function PackagePageClient({
-  packageName,
-  requestStartedAt,
-}: {
-  packageName: string;
-  requestStartedAt: number;
-}) {
+export function PackagePageClient({ packageName }: { packageName: string }) {
   const queryClient = useQueryClient();
   const defaults = useMemo(() => defaultDateRange(), []);
   const [queryState, setQueryState] = useQueryStates({
@@ -103,17 +93,22 @@ export function PackagePageClient({
   });
   const [streamError, setStreamError] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(true);
-  const [loadingSource, setLoadingSource] = useState<"interval" | "search" | null>(null);
-  const [displayPayload, setDisplayPayload] = useState<PackageDownloadsPayload | null>(null);
-  const [loadDurationMs, setLoadDurationMs] = useState<number | null>(null);
+  const [loadingSource, setLoadingSource] = useState<
+    "interval" | "search" | null
+  >(null);
+  const [displayPayload, setDisplayPayload] =
+    useState<PackageDownloadsPayload | null>(null);
   const displayPayloadRef = useRef<PackageDownloadsPayload | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const fallbackAbortRef = useRef<AbortController | null>(null);
   const cancelledRef = useRef(false);
-  const previousDisplayPayloadRef = useRef<PackageDownloadsPayload | null>(null);
+  const previousDisplayPayloadRef = useRef<PackageDownloadsPayload | null>(
+    null
+  );
   const restoreDownloadsKeyRef = useRef<string | null>(null);
-  const completedPayloadsRef = useRef(new Map<string, PackageDownloadsPayload>());
-  const loadStartedAtRef = useRef(requestStartedAt);
+  const completedPayloadsRef = useRef(
+    new Map<string, PackageDownloadsPayload>()
+  );
 
   const downloadsQueryKey = useMemo(
     () =>
@@ -124,7 +119,7 @@ export function PackagePageClient({
         queryState.to,
         queryState.interval,
       ] as const,
-    [packageName, queryState.from, queryState.interval, queryState.to],
+    [packageName, queryState.from, queryState.interval, queryState.to]
   );
 
   const downloadsJsonUrl = `${buildBasePath(packageName)}/downloads?from=${queryState.from}&to=${queryState.to}&interval=${queryState.interval}`;
@@ -133,7 +128,7 @@ export function PackagePageClient({
     packageName,
     queryState.from,
     queryState.to,
-    queryState.interval,
+    queryState.interval
   );
 
   const metadataQuery = useQuery({
@@ -151,15 +146,25 @@ export function PackagePageClient({
     }) => {
       startTransition(() => {
         const current =
-          queryClient.getQueryData<PackageDownloadsPayload>(downloadsQueryKey) ??
-          emptyPayload(packageName, queryState.from, queryState.to, queryState.interval);
+          queryClient.getQueryData<PackageDownloadsPayload>(
+            downloadsQueryKey
+          ) ??
+          emptyPayload(
+            packageName,
+            queryState.from,
+            queryState.to,
+            queryState.interval
+          );
 
         const nextPayload = {
           ...current,
           series: mergeSeriesChunks(current.series, payload.series),
         };
 
-        queryClient.setQueryData<PackageDownloadsPayload>(downloadsQueryKey, nextPayload);
+        queryClient.setQueryData<PackageDownloadsPayload>(
+          downloadsQueryKey,
+          nextPayload
+        );
         setDisplayPayload(nextPayload);
       });
     },
@@ -170,7 +175,7 @@ export function PackagePageClient({
       queryState.from,
       queryState.interval,
       queryState.to,
-    ],
+    ]
   );
 
   const handleDone = useCallback(
@@ -178,12 +183,11 @@ export function PackagePageClient({
       queryClient.setQueryData(downloadsQueryKey, payload);
       completedPayloadsRef.current.set(downloadsCacheKey, payload);
       setDisplayPayload(payload);
-      setLoadDurationMs(Math.max(0, Date.now() - loadStartedAtRef.current));
       setLoadingSource(null);
       setIsStreaming(false);
       setStreamError(null);
     },
-    [downloadsCacheKey, downloadsQueryKey, queryClient],
+    [downloadsCacheKey, downloadsQueryKey, queryClient]
   );
 
   const handleFallback = useCallback(async () => {
@@ -204,14 +208,17 @@ export function PackagePageClient({
       queryClient.setQueryData(downloadsQueryKey, payload);
       completedPayloadsRef.current.set(downloadsCacheKey, payload);
       setDisplayPayload(payload);
-      setLoadDurationMs(Math.max(0, Date.now() - loadStartedAtRef.current));
       setLoadingSource(null);
       setStreamError(null);
     } catch (error) {
       if (abortController.signal.aborted) {
         return;
       }
-      setStreamError(error instanceof Error ? error.message : "Unable to load package history.");
+      setStreamError(
+        error instanceof Error
+          ? error.message
+          : "Unable to load package history."
+      );
     } finally {
       if (fallbackAbortRef.current === abortController) {
         fallbackAbortRef.current = null;
@@ -234,7 +241,7 @@ export function PackagePageClient({
         packageName,
         previousDisplayPayloadRef.current.range.from,
         previousDisplayPayloadRef.current.range.to,
-        previousDisplayPayloadRef.current.interval,
+        previousDisplayPayloadRef.current.interval
       );
       setDisplayPayload(previousDisplayPayloadRef.current);
       setQueryState({
@@ -260,9 +267,12 @@ export function PackagePageClient({
     fallbackAbortRef.current = null;
     previousDisplayPayloadRef.current = displayPayloadRef.current;
 
-    const current = queryClient.getQueryData<PackageDownloadsPayload>(downloadsQueryKey);
-    const cachedCompletedPayload = completedPayloadsRef.current.get(downloadsCacheKey) ?? null;
-    const isRestoringCompletedPayload = restoreDownloadsKeyRef.current === downloadsCacheKey;
+    const current =
+      queryClient.getQueryData<PackageDownloadsPayload>(downloadsQueryKey);
+    const cachedCompletedPayload =
+      completedPayloadsRef.current.get(downloadsCacheKey) ?? null;
+    const isRestoringCompletedPayload =
+      restoreDownloadsKeyRef.current === downloadsCacheKey;
 
     if (cachedCompletedPayload) {
       setDisplayPayload(cachedCompletedPayload);
@@ -276,15 +286,15 @@ export function PackagePageClient({
       return;
     }
 
-    loadStartedAtRef.current =
-      completedPayloadsRef.current.size === 0 && !displayPayloadRef.current
-        ? requestStartedAt
-        : Date.now();
-
     if (!current) {
       queryClient.setQueryData(
         downloadsQueryKey,
-        emptyPayload(packageName, queryState.from, queryState.to, queryState.interval),
+        emptyPayload(
+          packageName,
+          queryState.from,
+          queryState.to,
+          queryState.interval
+        )
       );
     }
 
@@ -313,7 +323,9 @@ export function PackagePageClient({
       if (cancelledRef.current) {
         return;
       }
-      const payload = JSON.parse((event as MessageEvent<string>).data) as PackageDownloadsPayload;
+      const payload = JSON.parse(
+        (event as MessageEvent<string>).data
+      ) as PackageDownloadsPayload;
       completed = true;
       handleDone(payload);
       eventSourceRef.current = null;
@@ -363,7 +375,6 @@ export function PackagePageClient({
     queryState.from,
     queryState.interval,
     queryState.to,
-    requestStartedAt,
     streamUrl,
   ]);
 
@@ -376,7 +387,7 @@ export function PackagePageClient({
   const visibleAuthors = metadataQuery.data?.maintainers.slice(0, 3) ?? [];
   const hiddenAuthorsCount = Math.max(
     0,
-    (metadataQuery.data?.maintainers.length ?? 0) - visibleAuthors.length,
+    (metadataQuery.data?.maintainers.length ?? 0) - visibleAuthors.length
   );
   const isInitialLoading = isStreaming && deferredSeries.length === 0;
   const isFirstPageLoad =
@@ -392,7 +403,7 @@ export function PackagePageClient({
         interval: event.currentTarget.value as (typeof INTERVALS)[number],
       });
     },
-    [setQueryState],
+    [setQueryState]
   );
 
   const handleSearchStart = useCallback(() => {
@@ -402,7 +413,6 @@ export function PackagePageClient({
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center gap-4">
       <SubjectSearch
-        mode="results"
         packageName={packageName}
         isLoading={isStreaming && loadingSource === "search"}
         isSearchDisabled={isFirstPageLoad}
@@ -419,7 +429,8 @@ export function PackagePageClient({
               rel="noreferrer"
               className="inline-flex items-center gap-2 uppercase text-3xl font-extrabold tracking-tight text-foreground transition-colors hover:text-muted-foreground"
             >
-              {metadataQuery.data.name} <ArrowSquareOutIcon className="h-4 w-4" />
+              {metadataQuery.data.name}{" "}
+              <ArrowSquareOutIcon className="h-4 w-4" />
             </Link>
           ) : (
             <h2 className="text-3xl font-extrabold tracking-tight text-foreground">
@@ -430,11 +441,15 @@ export function PackagePageClient({
           <div className="flex flex-wrap items-baseline gap-2 text-muted-foreground">
             <span
               className={
-                isStreaming ? "animate-pulse font-bold text-xl italic" : "font-bold text-xl italic"
+                isStreaming
+                  ? "animate-pulse font-bold text-xl italic"
+                  : "font-bold text-xl italic"
               }
             >
               {visibleSummaryPayload
-                ? formatCompactNumber(visibleSummaryPayload.summary.totalDownloads)
+                ? formatCompactNumber(
+                    visibleSummaryPayload.summary.totalDownloads
+                  )
                 : "0"}{" "}
               downloads
             </span>
@@ -466,7 +481,9 @@ export function PackagePageClient({
                 key={option.value}
                 type="button"
                 value={option.value}
-                variant={queryState.interval === option.value ? "secondary" : "ghost"}
+                variant={
+                  queryState.interval === option.value ? "secondary" : "ghost"
+                }
                 size="sm"
                 className="cursor-pointer p-0 px-4"
                 onClick={handleIntervalClick}
@@ -475,12 +492,6 @@ export function PackagePageClient({
               </Button>
             ))}
           </div>
-
-          {loadDurationMs === null ? null : (
-            <p className="text-xs text-muted-foreground justify-end">
-              Loaded in {formatLoadDuration(loadDurationMs)} ms
-            </p>
-          )}
         </div>
       </section>
 
@@ -525,7 +536,8 @@ export function PackagePageClient({
                     Crunching npm data...
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Fetching records from the registry. This might take a moment.
+                    Fetching records from the registry. This might take a
+                    moment.
                   </div>
                 </div>
               </div>
