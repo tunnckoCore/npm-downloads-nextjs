@@ -16,10 +16,10 @@ export function PackagePageSkeleton() {
         </div>
 
         <div className="mt-8 grid grid-cols-6 gap-2 md:grid-cols-12">
-          <div className="col-span-6 h-10 animate-pulse border border-input bg-secondary/40 md:col-span-6" />
-          <div className="col-span-2 h-10 animate-pulse border border-input bg-secondary/40" />
-          <div className="col-span-2 h-10 animate-pulse border border-input bg-secondary/40" />
-          <div className="col-span-2 h-10 animate-pulse border border-input bg-secondary/40" />
+          <div className="col-span-6 h-8 animate-pulse border border-input bg-secondary/40 md:col-span-6" />
+          <div className="col-span-2 h-8 animate-pulse border border-input bg-secondary/40" />
+          <div className="col-span-2 h-8 animate-pulse border border-input bg-secondary/40" />
+          <div className="col-span-2 h-8 animate-pulse border border-input bg-secondary/40" />
         </div>
       </section>
 
@@ -45,20 +45,14 @@ export function PackagePageSkeleton() {
             <div className="grid flex-1 grid-cols-[auto_1fr] gap-x-4">
               <div className="flex h-full flex-col justify-between py-4">
                 {["0", "6m", "13m", "19m", "26m"].map((label) => (
-                  <div
-                    key={label}
-                    className="h-4 w-8 animate-pulse bg-secondary/30"
-                  />
+                  <div key={label} className="h-4 w-8 animate-pulse bg-secondary/30" />
                 ))}
               </div>
 
               <div className="relative flex h-full flex-col justify-between">
                 <div className="absolute inset-0 flex flex-col justify-between py-4">
                   {["25", "50", "75", "100"].map((line) => (
-                    <div
-                      key={line}
-                      className="border-t border-dashed border-border/60"
-                    />
+                    <div key={line} className="border-t border-dashed border-border/60" />
                   ))}
                 </div>
 
@@ -74,10 +68,7 @@ export function PackagePageSkeleton() {
 
                 <div className="flex items-center justify-between gap-4 px-4 pb-3">
                   {["mar", "jun", "sep", "dec", "next-mar"].map((tick) => (
-                    <div
-                      key={tick}
-                      className="h-4 w-10 animate-pulse bg-secondary/30"
-                    />
+                    <div key={tick} className="h-4 w-10 animate-pulse bg-secondary/30" />
                   ))}
                 </div>
               </div>
