@@ -3,13 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  useTransition,
-} from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { ThemePresetSwitcher } from "@/components/theme-preset-switcher";
@@ -59,7 +53,7 @@ export function SubjectSearch({
 
       router.push(href);
     },
-    [router]
+    [router],
   );
 
   const submitToPackage = useCallback(
@@ -89,11 +83,7 @@ export function SubjectSearch({
         return false;
       }
 
-      if (
-        packageName === nextPackage &&
-        from === queryState.from &&
-        to === queryState.to
-      ) {
+      if (packageName === nextPackage && from === queryState.from && to === queryState.to) {
         return false;
       }
 
@@ -104,9 +94,7 @@ export function SubjectSearch({
       });
       const nextHref = `/package/${encodePackagePath(nextPackage)}?${searchParams.toString()}`;
 
-      onSearchStart?.(
-        packageName && packageName !== nextPackage ? "route" : "range"
-      );
+      onSearchStart?.(packageName && packageName !== nextPackage ? "route" : "range");
 
       startTransition(() => {
         navigateWithTransition(nextHref);
@@ -120,7 +108,7 @@ export function SubjectSearch({
       queryState.from,
       queryState.interval,
       queryState.to,
-    ]
+    ],
   );
 
   const handleSubmit = useCallback(
@@ -132,7 +120,7 @@ export function SubjectSearch({
         setIsSubmittingSearch(false);
       }
     },
-    [submitToPackage]
+    [submitToPackage],
   );
 
   useEffect(() => {
@@ -151,7 +139,7 @@ export function SubjectSearch({
       event.preventDefault();
       navigateWithTransition("/");
     },
-    [navigateWithTransition]
+    [navigateWithTransition],
   );
 
   return (
@@ -214,22 +202,16 @@ function SearchForm({
     to: initialTo,
   });
 
-  const handleFieldChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, value } = event.currentTarget;
-      setFormState((current) => ({
-        ...current,
-        [name]: value,
-      }));
-    },
-    []
-  );
+  const handleFieldChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.currentTarget;
+    setFormState((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  }, []);
 
   return (
-    <form
-      className="mt-8 grid grid-cols-6 gap-2 md:grid-cols-12"
-      onSubmit={onSubmit}
-    >
+    <form className="mt-8 grid grid-cols-6 gap-2 md:grid-cols-12" onSubmit={onSubmit}>
       <Input
         name="query"
         placeholder="npm package name"

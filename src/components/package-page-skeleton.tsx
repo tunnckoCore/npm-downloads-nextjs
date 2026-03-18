@@ -41,7 +41,7 @@ export function PackagePageSkeleton() {
 
       <Card>
         <CardContent className="relative p-0 pr-5 pt-5">
-          <div className="flex min-h-[24rem] flex-col justify-between px-5 pb-5">
+          <div className="flex min-h-96 flex-col justify-between px-5 pb-5">
             <div className="grid flex-1 grid-cols-[auto_1fr] gap-x-4">
               <div className="flex h-full flex-col justify-between py-4">
                 {["0", "6m", "13m", "19m", "26m"].map((label) => (
