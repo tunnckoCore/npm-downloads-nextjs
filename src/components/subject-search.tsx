@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import { toast } from "sonner";
 
 import { ThemePresetSwitcher } from "@/components/theme-preset-switcher";
@@ -53,7 +59,7 @@ export function SubjectSearch({
 
       router.push(href);
     },
-    [router],
+    [router]
   );
 
   const submitToPackage = useCallback(
@@ -83,7 +89,11 @@ export function SubjectSearch({
         return false;
       }
 
-      if (packageName === nextPackage && from === queryState.from && to === queryState.to) {
+      if (
+        packageName === nextPackage &&
+        from === queryState.from &&
+        to === queryState.to
+      ) {
         return false;
       }
 
@@ -94,7 +104,9 @@ export function SubjectSearch({
       });
       const nextHref = `/package/${encodePackagePath(nextPackage)}?${searchParams.toString()}`;
 
-      onSearchStart?.(packageName && packageName !== nextPackage ? "route" : "range");
+      onSearchStart?.(
+        packageName && packageName !== nextPackage ? "route" : "range"
+      );
 
       startTransition(() => {
         navigateWithTransition(nextHref);
@@ -108,7 +120,7 @@ export function SubjectSearch({
       queryState.from,
       queryState.interval,
       queryState.to,
-    ],
+    ]
   );
 
   const handleSubmit = useCallback(
@@ -120,7 +132,7 @@ export function SubjectSearch({
         setIsSubmittingSearch(false);
       }
     },
-    [submitToPackage],
+    [submitToPackage]
   );
 
   useEffect(() => {
@@ -139,12 +151,12 @@ export function SubjectSearch({
       event.preventDefault();
       navigateWithTransition("/");
     },
-    [navigateWithTransition],
+    [navigateWithTransition]
   );
 
   return (
     <section className={cn("w-full space-y-2", className)}>
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-2">
           <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
             <Link href="/" onClick={handleHomeClick}>
@@ -156,7 +168,7 @@ export function SubjectSearch({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 sm:w-auto">
           <ThemePresetSwitcher />
           <ThemeToggle />
         </div>
@@ -202,43 +214,49 @@ function SearchForm({
     to: initialTo,
   });
 
-  const handleFieldChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = event.currentTarget;
-    setFormState((current) => ({
-      ...current,
-      [name]: value,
-    }));
-  }, []);
+  const handleFieldChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const { name, value } = event.currentTarget;
+      setFormState((current) => ({
+        ...current,
+        [name]: value,
+      }));
+    },
+    []
+  );
 
   return (
-    <form className="mt-8 grid grid-cols-6 gap-2 md:grid-cols-12" onSubmit={onSubmit}>
+    <form
+      className="mt-8 grid grid-cols-2 gap-2 md:grid-cols-12"
+      onSubmit={onSubmit}
+    >
       <Input
         name="query"
         placeholder="npm package name"
         value={formState.query}
         onChange={handleFieldChange}
-        className={cn("col-span-6 cursor-pointer bg-background md:col-span-6")}
+        className={cn("col-span-2 cursor-pointer bg-background md:col-span-6")}
       />
       <Input
         name="from"
         type="date"
         value={formState.from}
         onChange={handleFieldChange}
-        className="col-span-2 cursor-pointer bg-background [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+        className="col-span-1 cursor-pointer bg-background md:col-span-2 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
       />
       <Input
         name="to"
         type="date"
         value={formState.to}
         onChange={handleFieldChange}
-        className="col-span-2 cursor-pointer bg-background [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+        className="col-span-1 cursor-pointer bg-background md:col-span-2 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
       />
       {isLoading ? (
         <Button
           key="cancel"
           type="button"
           variant="secondary"
-          className="col-span-2 cursor-pointer border-secondary"
+          className="col-span-2 cursor-pointer border-secondary md:col-span-2"
           onClick={onCancel}
         >
           Cancel
@@ -247,7 +265,7 @@ function SearchForm({
         <Button
           key="search"
           type="submit"
-          className="col-span-2 cursor-pointer border-primary"
+          className="col-span-2 cursor-pointer border-primary md:col-span-2"
           disabled={isSearchDisabled || isPending}
         >
           Search

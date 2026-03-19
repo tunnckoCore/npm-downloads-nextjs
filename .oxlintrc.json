@@ -10,10 +10,7 @@
     "react-hooks/set-state-in-effect": "off",
     "no-inline-comments": "off",
     "func-style": "off",
-    "max-statements": [
-      "error",
-      60
-    ],
+    "max-statements": ["error", 60],
     "no-plusplus": "off",
     "no-unused-vars": "off",
     "import/no-relative-parent-imports": "off",
@@ -23,10 +20,7 @@
     "unicorn/no-array-for-each": "off",
     "no-duplicate-imports": "off",
     "@typescript-eslint/no-explicit-any": "off",
-    "complexity": [
-      "error",
-      40
-    ],
+    "complexity": ["error", 40],
     "no-nested-ternary": "off",
     "no-empty-function": "off",
     "no-loop-func": "off",
@@ -48,10 +42,7 @@
     ],
     "no-warning-comments": "off",
     "prefer-template": "error",
-    "func-names": [
-      "error",
-      "always"
-    ],
+    "func-names": ["error", "always"],
     "no-unused-expressions": [
       "warn",
       {

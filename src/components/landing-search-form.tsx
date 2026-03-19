@@ -12,6 +12,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { defaultDateRange } from "@/lib/npm/date";
 import { encodePackagePath } from "@/lib/npm/routes";
 
@@ -101,51 +102,44 @@ export function LandingSearchForm() {
 
   return (
     <form
-      className="mt-8 grid grid-cols-6 gap-2 md:grid-cols-12"
+      className="mt-8 grid grid-cols-2 gap-2 md:grid-cols-12"
       onSubmit={handleSubmit}
     >
-      <div className="col-span-2 inline-flex border border-input bg-secondary/40">
-        <Button
-          type="button"
-          variant="ghost"
-          className="cursor-pointer p-0 px-4"
-          disabled
-        >
-          Author
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          className="cursor-pointer p-0 px-4"
-        >
-          Package
-        </Button>
-      </div>
+      <Tabs value="package" className="col-span-2 w-full md:col-span-2">
+        <TabsList className="w-full">
+          <TabsTrigger value="author" disabled className="cursor-pointer">
+            Author
+          </TabsTrigger>
+          <TabsTrigger value="package" className="cursor-pointer">
+            Package
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       <Input
         name="query"
         placeholder="npm package name"
         value={formState.query}
         onChange={handleFieldChange}
-        className="col-span-4 cursor-pointer bg-background md:col-span-4"
+        className="col-span-2 cursor-pointer bg-background md:col-span-4"
       />
       <Input
         name="from"
         type="date"
         value={formState.from}
         onChange={handleFieldChange}
-        className="col-span-2 cursor-pointer bg-background [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+        className="col-span-1 cursor-pointer bg-background md:col-span-2 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
       />
       <Input
         name="to"
         type="date"
         value={formState.to}
         onChange={handleFieldChange}
-        className="col-span-2 cursor-pointer bg-background [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+        className="col-span-1 cursor-pointer bg-background md:col-span-2 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
       />
       <Button
         type="submit"
-        className="col-span-2 cursor-pointer border-primary px-4 text-primary-foreground"
+        className="col-span-2 cursor-pointer border-primary px-4 text-primary-foreground md:col-span-2"
         disabled={isPending}
       >
         Search

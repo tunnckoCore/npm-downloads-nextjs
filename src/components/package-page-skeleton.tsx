@@ -2,9 +2,9 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export function PackagePageSkeleton() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center gap-4">
+    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center gap-4 px-5 py-10 sm:px-6 sm:py-20">
       <section className="w-full space-y-2">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
             <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
               npm downloads
@@ -45,14 +45,20 @@ export function PackagePageSkeleton() {
             <div className="grid flex-1 grid-cols-[auto_1fr] gap-x-4">
               <div className="flex h-full flex-col justify-between py-4">
                 {["0", "6m", "13m", "19m", "26m"].map((label) => (
-                  <div key={label} className="h-4 w-8 animate-pulse bg-secondary/30" />
+                  <div
+                    key={label}
+                    className="h-4 w-8 animate-pulse bg-secondary/30"
+                  />
                 ))}
               </div>
 
               <div className="relative flex h-full flex-col justify-between">
                 <div className="absolute inset-0 flex flex-col justify-between py-4">
                   {["25", "50", "75", "100"].map((line) => (
-                    <div key={line} className="border-t border-dashed border-border/60" />
+                    <div
+                      key={line}
+                      className="border-t border-dashed border-border/60"
+                    />
                   ))}
                 </div>
 
@@ -68,7 +74,10 @@ export function PackagePageSkeleton() {
 
                 <div className="flex items-center justify-between gap-4 px-4 pb-3">
                   {["mar", "jun", "sep", "dec", "next-mar"].map((tick) => (
-                    <div key={tick} className="h-4 w-10 animate-pulse bg-secondary/30" />
+                    <div
+                      key={tick}
+                      className="h-4 w-10 animate-pulse bg-secondary/30"
+                    />
                   ))}
                 </div>
               </div>

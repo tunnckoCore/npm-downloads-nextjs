@@ -55,7 +55,7 @@ export function ThemePresetSwitcher() {
       aria-label="Select color theme"
       value={preset}
       onChange={handleChange}
-      className="w-36 cursor-pointer"
+      className="w-full min-w-0 cursor-pointer sm:w-36"
     >
       {THEME_PRESETS.map((themePreset) => (
         <NativeSelectOption

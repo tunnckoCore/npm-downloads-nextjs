@@ -31,6 +31,8 @@ const intervalOptions = [
   { value: "yearly", label: "Yearly" },
 ] as const;
 
+const PRIORITY_AUTHOR = "tunnckocore";
+
 function authorHref(author: string) {
   return `/author/${encodeURIComponent(author)}`;
 }
@@ -39,11 +41,27 @@ function buildBasePath(packageName: string) {
   return `/api/v1/package/${encodePackagePath(packageName)}`;
 }
 
+function prioritizeMaintainers(maintainers: string[]) {
+  const priorityIndex = maintainers.findIndex(
+    (maintainer) => maintainer.toLowerCase() === PRIORITY_AUTHOR
+  );
+
+  if (priorityIndex <= 0) {
+    return maintainers;
+  }
+
+  return [
+    maintainers[priorityIndex],
+    ...maintainers.slice(0, priorityIndex),
+    ...maintainers.slice(priorityIndex + 1),
+  ];
+}
+
 function makeDownloadsCacheKey(
   packageName: string,
   from: string,
   to: string,
-  interval: PackageDownloadsPayload["interval"],
+  interval: PackageDownloadsPayload["interval"]
 ) {
   return ["package-downloads", packageName, from, to, interval].join(":");
 }
@@ -64,7 +82,7 @@ const emptyPayload = (
   packageName: string,
   from: string,
   to: string,
-  interval: PackageDownloadsPayload["interval"],
+  interval: PackageDownloadsPayload["interval"]
 ): PackageDownloadsPayload => ({
   packageName,
   range: { from, to },
@@ -93,15 +111,22 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
   });
   const [streamError, setStreamError] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(true);
-  const [loadingSource, setLoadingSource] = useState<"interval" | "search" | null>(null);
-  const [displayPayload, setDisplayPayload] = useState<PackageDownloadsPayload | null>(null);
+  const [loadingSource, setLoadingSource] = useState<
+    "interval" | "search" | null
+  >(null);
+  const [displayPayload, setDisplayPayload] =
+    useState<PackageDownloadsPayload | null>(null);
   const displayPayloadRef = useRef<PackageDownloadsPayload | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const fallbackAbortRef = useRef<AbortController | null>(null);
   const cancelledRef = useRef(false);
-  const previousDisplayPayloadRef = useRef<PackageDownloadsPayload | null>(null);
+  const previousDisplayPayloadRef = useRef<PackageDownloadsPayload | null>(
+    null
+  );
   const restoreDownloadsKeyRef = useRef<string | null>(null);
-  const completedPayloadsRef = useRef(new Map<string, PackageDownloadsPayload>());
+  const completedPayloadsRef = useRef(
+    new Map<string, PackageDownloadsPayload>()
+  );
 
   const downloadsQueryKey = useMemo(
     () =>
@@ -112,7 +137,7 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
         queryState.to,
         queryState.interval,
       ] as const,
-    [packageName, queryState.from, queryState.interval, queryState.to],
+    [packageName, queryState.from, queryState.interval, queryState.to]
   );
 
   const downloadsJsonUrl = `${buildBasePath(packageName)}/downloads?from=${queryState.from}&to=${queryState.to}&interval=${queryState.interval}`;
@@ -121,7 +146,7 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
     packageName,
     queryState.from,
     queryState.to,
-    queryState.interval,
+    queryState.interval
   );
 
   const metadataQuery = useQuery({
@@ -139,15 +164,25 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
     }) => {
       startTransition(() => {
         const current =
-          queryClient.getQueryData<PackageDownloadsPayload>(downloadsQueryKey) ??
-          emptyPayload(packageName, queryState.from, queryState.to, queryState.interval);
+          queryClient.getQueryData<PackageDownloadsPayload>(
+            downloadsQueryKey
+          ) ??
+          emptyPayload(
+            packageName,
+            queryState.from,
+            queryState.to,
+            queryState.interval
+          );
 
         const nextPayload = {
           ...current,
           series: mergeSeriesChunks(current.series, payload.series),
         };
 
-        queryClient.setQueryData<PackageDownloadsPayload>(downloadsQueryKey, nextPayload);
+        queryClient.setQueryData<PackageDownloadsPayload>(
+          downloadsQueryKey,
+          nextPayload
+        );
         setDisplayPayload(nextPayload);
       });
     },
@@ -158,7 +193,7 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
       queryState.from,
       queryState.interval,
       queryState.to,
-    ],
+    ]
   );
 
   const handleDone = useCallback(
@@ -170,7 +205,7 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
       setIsStreaming(false);
       setStreamError(null);
     },
-    [downloadsCacheKey, downloadsQueryKey, queryClient],
+    [downloadsCacheKey, downloadsQueryKey, queryClient]
   );
 
   const handleFallback = useCallback(async () => {
@@ -197,7 +232,11 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
       if (abortController.signal.aborted) {
         return;
       }
-      setStreamError(error instanceof Error ? error.message : "Unable to load package history.");
+      setStreamError(
+        error instanceof Error
+          ? error.message
+          : "Unable to load package history."
+      );
     } finally {
       if (fallbackAbortRef.current === abortController) {
         fallbackAbortRef.current = null;
@@ -220,7 +259,7 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
         packageName,
         previousDisplayPayloadRef.current.range.from,
         previousDisplayPayloadRef.current.range.to,
-        previousDisplayPayloadRef.current.interval,
+        previousDisplayPayloadRef.current.interval
       );
       setDisplayPayload(previousDisplayPayloadRef.current);
       setQueryState({
@@ -246,9 +285,12 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
     fallbackAbortRef.current = null;
     previousDisplayPayloadRef.current = displayPayloadRef.current;
 
-    const current = queryClient.getQueryData<PackageDownloadsPayload>(downloadsQueryKey);
-    const cachedCompletedPayload = completedPayloadsRef.current.get(downloadsCacheKey) ?? null;
-    const isRestoringCompletedPayload = restoreDownloadsKeyRef.current === downloadsCacheKey;
+    const current =
+      queryClient.getQueryData<PackageDownloadsPayload>(downloadsQueryKey);
+    const cachedCompletedPayload =
+      completedPayloadsRef.current.get(downloadsCacheKey) ?? null;
+    const isRestoringCompletedPayload =
+      restoreDownloadsKeyRef.current === downloadsCacheKey;
 
     if (cachedCompletedPayload) {
       setDisplayPayload(cachedCompletedPayload);
@@ -265,7 +307,12 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
     if (!current) {
       queryClient.setQueryData(
         downloadsQueryKey,
-        emptyPayload(packageName, queryState.from, queryState.to, queryState.interval),
+        emptyPayload(
+          packageName,
+          queryState.from,
+          queryState.to,
+          queryState.interval
+        )
       );
     }
 
@@ -294,7 +341,9 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
       if (cancelledRef.current) {
         return;
       }
-      const payload = JSON.parse((event as MessageEvent<string>).data) as PackageDownloadsPayload;
+      const payload = JSON.parse(
+        (event as MessageEvent<string>).data
+      ) as PackageDownloadsPayload;
       completed = true;
       handleDone(payload);
       eventSourceRef.current = null;
@@ -353,10 +402,14 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
     isStreaming && previousDisplayPayloadRef.current
       ? previousDisplayPayloadRef.current
       : downloads;
-  const visibleAuthors = metadataQuery.data?.maintainers.slice(0, 3) ?? [];
+  const orderedMaintainers = useMemo(
+    () => prioritizeMaintainers(metadataQuery.data?.maintainers ?? []),
+    [metadataQuery.data?.maintainers]
+  );
+  const visibleAuthors = orderedMaintainers.slice(0, 3);
   const hiddenAuthorsCount = Math.max(
     0,
-    (metadataQuery.data?.maintainers.length ?? 0) - visibleAuthors.length,
+    orderedMaintainers.length - visibleAuthors.length
   );
   const isInitialLoading = isStreaming && deferredSeries.length === 0;
   const isFirstPageLoad =
@@ -372,7 +425,7 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
         interval: event.currentTarget.value as (typeof INTERVALS)[number],
       });
     },
-    [setQueryState],
+    [setQueryState]
   );
 
   const handleSearchTransitionStart = useCallback(() => {
@@ -380,7 +433,7 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
   }, []);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center gap-4">
+    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center gap-4 px-5 py-10 sm:px-6 sm:py-20">
       <SubjectSearch
         packageName={packageName}
         isLoading={loadingSource === "search"}
@@ -396,12 +449,13 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
               href={metadataQuery.data.npmUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 uppercase text-3xl font-extrabold tracking-tight text-foreground transition-colors hover:text-muted-foreground"
+              className="inline-flex items-center gap-2 uppercase text-2xl font-extrabold tracking-tight text-foreground transition-colors hover:text-muted-foreground sm:text-3xl"
             >
-              {metadataQuery.data.name?.toUpperCase()} <ArrowSquareOutIcon className="h-4 w-4" />
+              {metadataQuery.data.name?.toUpperCase()}{" "}
+              <ArrowSquareOutIcon className="h-4 w-4" />
             </Link>
           ) : (
-            <h2 className="text-3xl font-extrabold uppercase tracking-tight text-foreground">
+            <h2 className="text-2xl font-extrabold uppercase tracking-tight text-foreground sm:text-3xl">
               {packageName.toUpperCase()}
             </h2>
           )}
@@ -409,17 +463,21 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
           <div className="flex flex-wrap items-baseline gap-2 text-muted-foreground">
             <span
               className={
-                isStreaming ? "animate-pulse font-bold text-xl italic" : "font-bold text-xl italic"
+                isStreaming
+                  ? "animate-pulse text-lg font-bold italic sm:text-xl"
+                  : "text-lg font-bold italic sm:text-xl"
               }
             >
               {visibleSummaryPayload
-                ? formatCompactNumber(visibleSummaryPayload.summary.totalDownloads)
+                ? formatCompactNumber(
+                    visibleSummaryPayload.summary.totalDownloads
+                  )
                 : "0"}{" "}
               downloads
             </span>
 
             {visibleAuthors.length > 0 ? (
-              <span className="inline-flex flex-wrap items-baseline gap-1 text-sm leading-6">
+              <span className="inline-flex flex-wrap items-baseline gap-1 text-xs leading-6 sm:text-sm">
                 <span className="pr-1">&bull;</span>
                 {visibleAuthors.map((author, index) => (
                   <span key={author}>
@@ -445,7 +503,9 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
                 key={option.value}
                 type="button"
                 value={option.value}
-                variant={queryState.interval === option.value ? "secondary" : "ghost"}
+                variant={
+                  queryState.interval === option.value ? "secondary" : "ghost"
+                }
                 size="sm"
                 className="cursor-pointer p-0 px-4"
                 onClick={handleIntervalClick}
@@ -497,8 +557,12 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
                   <div className="text-lg font-medium tracking-tight text-foreground/80">
                     Crunching npm data...
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    Fetching records from the registry. This might take a moment.
+                  <div className="text-sm text-muted-foreground sm:hidden">
+                    Fetching package history...
+                  </div>
+                  <div className="hidden text-sm text-muted-foreground sm:block">
+                    Fetching records from the registry. This might take a
+                    moment.
                   </div>
                 </div>
               </div>
