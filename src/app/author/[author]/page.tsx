@@ -23,7 +23,7 @@ export default async function AuthorPage({
   await connection();
   const resolved = await params;
   const authorName = decodeAuthorParam(resolved.author);
-  const packages = await fetchAuthorPackages(authorName);
+  const packages = await fetchAuthorPackages(authorName).catch(() => []);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 px-6 py-10">
