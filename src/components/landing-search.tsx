@@ -38,7 +38,7 @@ function LandingSearchFormFallback() {
     <form className="mt-8 grid grid-cols-2 gap-2 md:grid-cols-12">
       <Tabs value="package" className="col-span-2 w-full md:col-span-2">
         <TabsList className="w-full">
-          <TabsTrigger value="author" disabled className="cursor-pointer">
+          <TabsTrigger value="author" className="cursor-pointer">
             Author
           </TabsTrigger>
           <TabsTrigger value="package" className="cursor-pointer">
