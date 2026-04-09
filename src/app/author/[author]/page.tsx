@@ -8,7 +8,11 @@ import { fetchAuthorPackages } from "@/lib/npm/author";
 import { encodePackagePath } from "@/lib/npm/routes";
 
 function decodeAuthorParam(param: string) {
-  return decodeURIComponent(param).trim();
+  try {
+    return decodeURIComponent(param).trim();
+  } catch {
+    return param.trim();
+  }
 }
 
 export default async function AuthorPage({
