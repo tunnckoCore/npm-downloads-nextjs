@@ -35,14 +35,15 @@ export function LandingSearchForm() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const defaults = useMemo(() => defaultDateRange(), []);
+  const [subject, setSubject] = useState<"author" | "package">("package");
   const [formState, setFormState] = useState({
     from: defaults.from,
     query: "",
     to: defaults.to,
   });
   const href = useMemo(() => {
-    const packageName = formState.query.trim();
-    if (!packageName || formState.from >= formState.to) {
+    const query = formState.query.trim();
+    if (!query || formState.from >= formState.to) {
       return null;
     }
 
@@ -52,8 +53,16 @@ export function LandingSearchForm() {
       interval: "monthly",
     });
 
-    return `/package/${encodePackagePath(packageName)}?${searchParams.toString()}`;
-  }, [formState.from, formState.query, formState.to]);
+    if (subject === "author") {
+      const normalizedAuthor = query.replace(/^@/, "");
+      if (!normalizedAuthor) {
+        return null;
+      }
+      return `/author/${encodeURIComponent(normalizedAuthor)}?${searchParams.toString()}`;
+    }
+
+    return `/package/${encodePackagePath(query)}?${searchParams.toString()}`;
+  }, [formState.from, formState.query, formState.to, subject]);
 
   const handleFieldChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,8 +88,8 @@ export function LandingSearchForm() {
       event.preventDefault();
 
       const { from, query, to } = formState;
-      const packageName = query.trim();
-      if (!packageName) {
+      const queryValue = query.trim();
+      if (!queryValue) {
         return;
       }
 
@@ -105,9 +114,17 @@ export function LandingSearchForm() {
       className="mt-8 grid grid-cols-2 gap-2 md:grid-cols-12"
       onSubmit={handleSubmit}
     >
-      <Tabs value="package" className="col-span-2 w-full md:col-span-2">
+      <Tabs
+        value={subject}
+        onValueChange={(value) => {
+          if (value === "author" || value === "package") {
+            setSubject(value);
+          }
+        }}
+        className="col-span-2 w-full md:col-span-2"
+      >
         <TabsList className="w-full">
-          <TabsTrigger value="author" disabled className="cursor-pointer">
+          <TabsTrigger value="author" className="cursor-pointer">
             Author
           </TabsTrigger>
           <TabsTrigger value="package" className="cursor-pointer">
@@ -118,7 +135,7 @@ export function LandingSearchForm() {
 
       <Input
         name="query"
-        placeholder="npm package name"
+        placeholder={subject === "author" ? "npm author" : "npm package name"}
         value={formState.query}
         onChange={handleFieldChange}
         className="col-span-2 cursor-pointer bg-background md:col-span-4"

@@ -23,15 +23,19 @@ import { packageExists } from "@/lib/package-exists";
 import { cn } from "@/lib/utils";
 
 export function SubjectSearch({
+  authorName,
   packageName,
   className,
+  subject = "package",
   isLoading = false,
   isSearchDisabled = false,
   onCancel,
   onSearchStart,
 }: {
+  authorName?: string;
   packageName?: string;
   className?: string;
+  subject?: "author" | "package";
   isLoading?: boolean;
   isSearchDisabled?: boolean;
   onCancel?: () => void;
@@ -123,16 +127,73 @@ export function SubjectSearch({
     ]
   );
 
+  const submitToAuthor = useCallback(
+    async (formData: FormData) => {
+      const nextAuthorRaw = String(formData.get("query") ?? "").trim();
+      const nextFrom = String(formData.get("from") ?? "").trim();
+      const nextTo = String(formData.get("to") ?? "").trim();
+      const normalizedAuthor = nextAuthorRaw.replace(/^@/, "").trim();
+      if (!normalizedAuthor) {
+        toast.error("Please enter a valid npm author.");
+        return false;
+      }
+
+      const from = nextFrom || queryState.from;
+      const to = nextTo || queryState.to;
+      if (from >= to) {
+        toast.error("Start date must be earlier than end date.");
+        return false;
+      }
+
+      if (
+        authorName?.replace(/^@/, "") === normalizedAuthor &&
+        from === queryState.from &&
+        to === queryState.to
+      ) {
+        return false;
+      }
+
+      const searchParams = new URLSearchParams({
+        from,
+        to,
+        interval: queryState.interval,
+      });
+      const nextHref = `/author/${encodeURIComponent(normalizedAuthor)}?${searchParams.toString()}`;
+
+      onSearchStart?.(
+        authorName && authorName.replace(/^@/, "") !== normalizedAuthor
+          ? "route"
+          : "range"
+      );
+
+      startTransition(() => {
+        navigateWithTransition(nextHref);
+      });
+      return true;
+    },
+    [
+      authorName,
+      navigateWithTransition,
+      onSearchStart,
+      queryState.from,
+      queryState.interval,
+      queryState.to,
+    ]
+  );
+
   const handleSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       setIsSubmittingSearch(true);
-      const started = await submitToPackage(new FormData(event.currentTarget));
+      const started =
+        subject === "author"
+          ? await submitToAuthor(new FormData(event.currentTarget))
+          : await submitToPackage(new FormData(event.currentTarget));
       if (!started) {
         setIsSubmittingSearch(false);
       }
     },
-    [submitToPackage]
+    [subject, submitToAuthor, submitToPackage]
   );
 
   useEffect(() => {
@@ -175,13 +236,14 @@ export function SubjectSearch({
       </div>
 
       <SearchForm
-        key={`${packageName ?? ""}:${queryState.from}:${queryState.to}`}
+        key={`${subject}:${authorName ?? packageName ?? ""}:${queryState.from}:${queryState.to}`}
         initialFrom={queryState.from}
-        initialQuery={packageName ?? ""}
+        initialQuery={subject === "author" ? authorName ?? "" : packageName ?? ""}
         initialTo={queryState.to}
         isLoading={isLoading || isSubmittingSearch}
         isSearchDisabled={isSearchDisabled}
         isPending={isPending}
+        subject={subject}
         onCancel={handleCancel}
         onSubmit={handleSubmit}
       />
@@ -196,6 +258,7 @@ function SearchForm({
   isLoading,
   isSearchDisabled,
   isPending,
+  subject,
   onCancel,
   onSubmit,
 }: {
@@ -205,6 +268,7 @@ function SearchForm({
   isLoading: boolean;
   isSearchDisabled: boolean;
   isPending: boolean;
+  subject: "author" | "package";
   onCancel?: () => void;
   onSubmit?: (event: React.FormEvent<HTMLFormElement>) => void;
 }) {
@@ -232,7 +296,7 @@ function SearchForm({
     >
       <Input
         name="query"
-        placeholder="npm package name"
+        placeholder={subject === "author" ? "npm author" : "npm package name"}
         value={formState.query}
         onChange={handleFieldChange}
         className={cn("col-span-2 cursor-pointer bg-background md:col-span-6")}
