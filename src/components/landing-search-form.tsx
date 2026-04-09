@@ -55,6 +55,9 @@ export function LandingSearchForm() {
 
     if (subject === "author") {
       const normalizedAuthor = query.replace(/^@/, "");
+      if (!normalizedAuthor) {
+        return null;
+      }
       return `/author/${encodeURIComponent(normalizedAuthor)}?${searchParams.toString()}`;
     }
 
@@ -111,20 +114,20 @@ export function LandingSearchForm() {
       className="mt-8 grid grid-cols-2 gap-2 md:grid-cols-12"
       onSubmit={handleSubmit}
     >
-      <Tabs value={subject} className="col-span-2 w-full md:col-span-2">
+      <Tabs
+        value={subject}
+        onValueChange={(value) => {
+          if (value === "author" || value === "package") {
+            setSubject(value);
+          }
+        }}
+        className="col-span-2 w-full md:col-span-2"
+      >
         <TabsList className="w-full">
-          <TabsTrigger
-            value="author"
-            className="cursor-pointer"
-            onClick={() => setSubject("author")}
-          >
+          <TabsTrigger value="author" className="cursor-pointer">
             Author
           </TabsTrigger>
-          <TabsTrigger
-            value="package"
-            className="cursor-pointer"
-            onClick={() => setSubject("package")}
-          >
+          <TabsTrigger value="package" className="cursor-pointer">
             Package
           </TabsTrigger>
         </TabsList>
