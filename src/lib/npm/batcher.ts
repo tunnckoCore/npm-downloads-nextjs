@@ -25,6 +25,7 @@ import { fetchJsonWithRetry, NpmUpstreamError } from "@/lib/npm/upstream";
 
 const SHARD_TTL_MS = 1000 * 60 * 60 * 6;
 const BULK_URL_SOFT_LIMIT = 1800;
+const BATCH_RETRY_DELAYS_MS = [2000, 5000, 10000];
 
 function makeShardKey(packageName: string, window: ShardWindow) {
   return `${packageName}:${window.from}:${window.to}`;
@@ -42,6 +43,23 @@ function isRecoverableBoundaryError(error: unknown) {
     error.status === 400 &&
     /end date > start date/i.test(error.message)
   );
+}
+
+function isRetriableUpstreamError(error: unknown) {
+  return (
+    error instanceof NpmUpstreamError &&
+    (error.status === 429 || error.status >= 500)
+  );
+}
+
+function sleep(durationMs: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, durationMs);
+  });
+}
+
+function withJitter(durationMs: number) {
+  return durationMs + Math.floor(Math.random() * 500);
 }
 
 async function fetchSingleWindow(
@@ -168,11 +186,37 @@ function chunkPackagesForWindow(packages: string[], window: ShardWindow) {
 }
 
 async function fetchWindowChunk(packages: string[], window: ShardWindow) {
-  const batchKey = `${window.key}:${packages.toSorted().join(",")}`;
+  const sortedPackages = packages.toSorted();
+  const batchKey = `${window.key}:${sortedPackages.join(",")}`;
+  let lastError: unknown = null;
 
-  return withInflightBatch(batchKey, () =>
-    fetchWindowChunkCached(packages.toSorted(), window)
-  );
+  for (let attempt = 0; attempt <= BATCH_RETRY_DELAYS_MS.length; attempt += 1) {
+    try {
+      return await withInflightBatch(batchKey, () =>
+        fetchWindowChunkCached(sortedPackages, window)
+      );
+    } catch (error) {
+      lastError = error;
+
+      if (
+        !isRetriableUpstreamError(error) ||
+        attempt === BATCH_RETRY_DELAYS_MS.length
+      ) {
+        throw error;
+      }
+
+      const baseDelay =
+        BATCH_RETRY_DELAYS_MS[attempt] ?? BATCH_RETRY_DELAYS_MS.at(-1) ?? 0;
+      const retryAfterMs =
+        error instanceof NpmUpstreamError ? error.retryAfterMs ?? 0 : 0;
+      const waitDurationMs = withJitter(
+        Math.max(baseDelay, retryAfterMs)
+      );
+      await sleep(waitDurationMs);
+    }
+  }
+
+  throw lastError;
 }
 
 async function fetchWindowChunkCached(

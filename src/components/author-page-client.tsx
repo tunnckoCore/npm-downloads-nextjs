@@ -141,6 +141,7 @@ export function AuthorPageClient({
     isStreaming &&
     !previousDisplayPayloadRef.current &&
     (displayPayload?.series.length ?? 0) === 0;
+  const authorStatusMessage = streamError;
 
   const handleIntervalClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     cancelAuthorDownloads(downloadsCacheKey);
@@ -228,14 +229,18 @@ export function AuthorPageClient({
         </div>
       </section>
 
+      {authorStatusMessage ? (
+        <Card size="sm">
+          <CardContent>
+            <p className="text-sm text-foreground">
+              {authorStatusMessage || "some error message"}
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
         <CardContent className="relative p-0 pr-5 pt-5">
-          {streamError ? (
-            <div className="m-10 rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-foreground">
-              {streamError}
-            </div>
-          ) : null}
-
           <DownloadsChart
             interval={queryState.interval}
             series={deferredSeries}
@@ -281,11 +286,8 @@ export function AuthorPageClient({
         </CardContent>
       </Card>
 
-      <Card className="mt-4">
+      <Card>
         <CardHeader className="space-y-3">
-          <Badge className="w-fit" variant="secondary">
-            Author
-          </Badge>
           <CardTitle className="text-2xl">@{authorName}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

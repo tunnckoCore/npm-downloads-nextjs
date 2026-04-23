@@ -274,6 +274,35 @@ function hasAuthorDownloadsProgress(payload: AuthorDownloadsPayload | null) {
   );
 }
 
+function normalizeAuthorDownloadsErrorMessage(
+  message: string,
+  hasPartialResults: boolean
+) {
+  const normalizedMessage = message.trim();
+  const isGenericServerComponentsMessage = normalizedMessage.includes(
+    "An error occurred in the Server Components render"
+  );
+  const isRateLimitMessage =
+    /rate[- ]limit/i.test(normalizedMessage) ||
+    normalizedMessage.includes("429");
+
+  if (hasPartialResults) {
+    if (isRateLimitMessage) {
+      return "npm is rate-limiting this request. Showing partial results.";
+    }
+
+    if (isGenericServerComponentsMessage) {
+      return "Unable to finish loading author history right now. Showing partial results.";
+    }
+  }
+
+  if (isGenericServerComponentsMessage) {
+    return "Unable to load author history right now.";
+  }
+
+  return normalizedMessage;
+}
+
 function setStreamingEntry(
   cacheKey: string,
   payload: AuthorDownloadsPayload | null,
@@ -398,7 +427,10 @@ function startAuthorDownloadsStream(
     const currentPayload = runtime.payload ?? existingEntry?.payload ?? null;
     const nextEntry: AuthorDownloadsEntry = {
       cacheKey,
-      error: payload.message ?? "Unable to stream author history.",
+      error: normalizeAuthorDownloadsErrorMessage(
+        payload.message ?? "Unable to stream author history.",
+        hasAuthorDownloadsProgress(currentPayload)
+      ),
       isHydratedPartial: false,
       payload: currentPayload,
       progress: null,
@@ -437,7 +469,10 @@ function startAuthorDownloadsStream(
         const nextEntry: AuthorDownloadsEntry = shouldKeepCurrentPayload
           ? {
               cacheKey,
-              error: "Unable to finish loading author history. Showing partial results.",
+              error: normalizeAuthorDownloadsErrorMessage(
+                "Unable to finish loading author history. Showing partial results.",
+                true
+              ),
               isHydratedPartial: false,
               payload: currentPayload,
               progress: null,
@@ -462,14 +497,17 @@ function startAuthorDownloadsStream(
           return;
         }
 
+        const currentPayload = runtime.payload ?? existingEntry?.payload ?? null;
         const nextEntry: AuthorDownloadsEntry = {
           cacheKey,
-          error:
+          error: normalizeAuthorDownloadsErrorMessage(
             error instanceof Error
               ? error.message
               : "Unable to load author history.",
+            hasAuthorDownloadsProgress(currentPayload)
+          ),
           isHydratedPartial: false,
-          payload: runtime.payload ?? existingEntry?.payload ?? null,
+          payload: currentPayload,
           progress: null,
           status: "error",
           updatedAt: Date.now(),
