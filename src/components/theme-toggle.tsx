@@ -1,9 +1,9 @@
 "use client";
 
 import { MoonIcon, SunIcon } from "@phosphor-icons/react";
-import { useTheme } from "next-themes";
 import { useCallback, useEffect, useState } from "react";
 
+import { useTheme } from "@/components/providers";
 import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
