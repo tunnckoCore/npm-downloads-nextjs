@@ -9,6 +9,7 @@ import { SubjectSearch } from "@/components/subject-search";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { AuthorDownloadsPayload, AuthorPackage } from "@/lib/npm/author";
 import {
   cancelAuthorDownloads,
   makeAuthorDownloadsCacheKey,
@@ -17,10 +18,6 @@ import {
   useAuthorDownloadsEntry,
 } from "@/lib/npm/author-downloads-store";
 import { defaultDateRange } from "@/lib/npm/date";
-import type {
-  AuthorDownloadsPayload,
-  AuthorPackage,
-} from "@/lib/npm/author";
 import { encodePackagePath } from "@/lib/npm/routes";
 import { INTERVALS } from "@/lib/npm/types";
 import { formatCompactNumber } from "@/lib/utils";
@@ -190,7 +187,7 @@ export function AuthorPageClient({
 
       <section className="flex flex-col items-start justify-between gap-4 py-4 sm:flex-row sm:items-center">
         <div className="flex flex-col gap-1">
-          <h2 className="text-2xl font-extrabold uppercase tracking-tight text-foreground sm:text-3xl">
+          <h2 className="text-2xl font-extrabold lowercase tracking-tight text-foreground sm:text-3xl">
             @{authorName}
           </h2>
           <div className="flex flex-wrap items-baseline gap-2 text-muted-foreground">
@@ -274,7 +271,8 @@ export function AuthorPageClient({
                     Loading packages in the background...
                   </div>
                   <div className="hidden text-sm text-muted-foreground sm:block">
-                    Aggregating package histories progressively. This might take a moment.
+                    Aggregating package histories progressively. This might take
+                    a moment.
                   </div>
                 </div>
               </div>
@@ -304,11 +302,13 @@ export function AuthorPageClient({
             <>
               <ul className="space-y-3">
                 {visiblePackages.map((pkg) => {
-                  const hasPackageDownloads = Object.prototype.hasOwnProperty.call(
-                    visiblePackageDownloads,
-                    pkg.name
-                  );
-                  const packageDownloads = visiblePackageDownloads[pkg.name] ?? 0;
+                  const hasPackageDownloads =
+                    Object.prototype.hasOwnProperty.call(
+                      visiblePackageDownloads,
+                      pkg.name
+                    );
+                  const packageDownloads =
+                    visiblePackageDownloads[pkg.name] ?? 0;
 
                   return (
                     <li key={pkg.name} className="rounded-md border p-3">
