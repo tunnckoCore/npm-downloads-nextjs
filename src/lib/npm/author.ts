@@ -149,57 +149,44 @@ export async function buildAuthorDownloadsPayload(input: {
     };
   }
 
-  try {
-    const results = await loadPackagesHistoryShards(packageNames, input.range);
-    const merged = new Map<string, number>();
-    const packageDownloads: Record<string, number> = {};
+  const results = await loadPackagesHistoryShards(packageNames, input.range);
+  const merged = new Map<string, number>();
+  const packageDownloads: Record<string, number> = {};
 
-    for (const packageName of packageNames) {
-      const entry = results.get(packageName);
-      if (!entry) {
-        continue;
-      }
-
-      const points = trimSeriesToRange(
-        entry.shards,
-        input.range.from,
-        input.range.to
-      );
-      const totalDownloads = points.reduce(
-        (sum, point) => sum + point.downloads,
-        0
-      );
-
-      packageDownloads[packageName] = totalDownloads;
-
-      for (const point of points) {
-        merged.set(point.date, (merged.get(point.date) ?? 0) + point.downloads);
-      }
+  for (const packageName of packageNames) {
+    const entry = results.get(packageName);
+    if (!entry) {
+      continue;
     }
 
-    const dailySeries = [...merged.entries()]
-      .toSorted(([left], [right]) => left.localeCompare(right))
-      .map(([date, downloads]) => ({ date, downloads }));
+    const points = trimSeriesToRange(
+      entry.shards,
+      input.range.from,
+      input.range.to
+    );
+    const totalDownloads = points.reduce(
+      (sum, point) => sum + point.downloads,
+      0
+    );
 
-    return {
-      author,
-      interval: input.interval,
-      packageCount: packageNames.length,
-      packageDownloads,
-      range: input.range,
-      series: aggregateSeries(dailySeries, input.interval),
-      summary: summarizeSeries(dailySeries),
-    };
-  } catch {
-    const dailySeries: { date: string; downloads: number }[] = [];
-    return {
-      author,
-      interval: input.interval,
-      packageCount: packageNames.length,
-      packageDownloads: {},
-      range: input.range,
-      series: aggregateSeries(dailySeries, input.interval),
-      summary: summarizeSeries(dailySeries),
-    };
+    packageDownloads[packageName] = totalDownloads;
+
+    for (const point of points) {
+      merged.set(point.date, (merged.get(point.date) ?? 0) + point.downloads);
+    }
   }
+
+  const dailySeries = [...merged.entries()]
+    .toSorted(([left], [right]) => left.localeCompare(right))
+    .map(([date, downloads]) => ({ date, downloads }));
+
+  return {
+    author,
+    interval: input.interval,
+    packageCount: packageNames.length,
+    packageDownloads,
+    range: input.range,
+    series: aggregateSeries(dailySeries, input.interval),
+    summary: summarizeSeries(dailySeries),
+  };
 }

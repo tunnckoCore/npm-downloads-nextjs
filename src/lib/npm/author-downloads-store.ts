@@ -262,6 +262,18 @@ function closeAuthorDownloadsRuntime(cacheKey: string) {
   authorDownloadsRuntimes.delete(cacheKey);
 }
 
+function hasAuthorDownloadsProgress(payload: AuthorDownloadsPayload | null) {
+  if (!payload) {
+    return false;
+  }
+
+  return (
+    payload.series.length > 0 ||
+    payload.summary.totalDownloads > 0 ||
+    Object.keys(payload.packageDownloads).length > 0
+  );
+}
+
 function setStreamingEntry(
   cacheKey: string,
   payload: AuthorDownloadsPayload | null,
@@ -417,15 +429,30 @@ function startAuthorDownloadsStream(
       signal: abortController.signal,
     })
       .then((payload) => {
-        const nextEntry: AuthorDownloadsEntry = {
-          cacheKey,
-          error: null,
-          isHydratedPartial: false,
-          payload,
-          progress: null,
-          status: "complete",
-          updatedAt: Date.now(),
-        };
+        const currentPayload = runtime.payload ?? existingEntry?.payload ?? null;
+        const shouldKeepCurrentPayload =
+          hasAuthorDownloadsProgress(currentPayload) &&
+          !hasAuthorDownloadsProgress(payload);
+
+        const nextEntry: AuthorDownloadsEntry = shouldKeepCurrentPayload
+          ? {
+              cacheKey,
+              error: "Unable to finish loading author history. Showing partial results.",
+              isHydratedPartial: false,
+              payload: currentPayload,
+              progress: null,
+              status: "error",
+              updatedAt: Date.now(),
+            }
+          : {
+              cacheKey,
+              error: null,
+              isHydratedPartial: false,
+              payload,
+              progress: null,
+              status: "complete",
+              updatedAt: Date.now(),
+            };
 
         setAuthorDownloadsEntry(cacheKey, nextEntry);
         persistAuthorDownloadsEntry(cacheKey, nextEntry);
