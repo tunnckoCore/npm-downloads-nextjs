@@ -21,10 +21,13 @@ export async function generateMetadata({
     openGraph: {
       title: packageName,
       description: `Analyze download stats for ${packageName} on npm.`,
+      images: ["/og/package.png"],
     },
     twitter: {
+      card: "summary_large_image",
       title: packageName,
       description: `Analyze download stats for ${packageName} on npm.`,
+      images: ["/og/package.png"],
     },
   };
 }

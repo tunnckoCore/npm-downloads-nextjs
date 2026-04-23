@@ -27,10 +27,13 @@ export async function generateMetadata({
     openGraph: {
       title: `@${authorName}`,
       description: `Analyze download stats for npm author @${authorName}.`,
+      images: ["/og/author.png"],
     },
     twitter: {
+      card: "summary_large_image",
       title: `@${authorName}`,
       description: `Analyze download stats for npm author @${authorName}.`,
+      images: ["/og/author.png"],
     },
   };
 }
