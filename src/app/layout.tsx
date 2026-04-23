@@ -26,9 +26,43 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+function resolveSiteUrl() {
+  const raw =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    process.env.URL ??
+    (process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : undefined);
+
+  if (!raw) {
+    return "http://localhost:3000";
+  }
+
+  return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+}
+
+const siteUrl = resolveSiteUrl();
+
 export const metadata: Metadata = {
-  title: "npm downloads",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "npm downloads",
+    template: "%s | npm downloads",
+  },
   description: "Analyze and visualize download stats for npm packages.",
+  openGraph: {
+    title: "npm downloads",
+    description: "Analyze and visualize download stats for npm packages.",
+    images: ["/og/home.png"],
+    siteName: "npm downloads",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "npm downloads",
+    description: "Analyze and visualize download stats for npm packages.",
+    images: ["/og/home.png"],
+  },
 };
 
 export default function RootLayout({

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
@@ -10,6 +11,31 @@ function decodeAuthorParam(param: string) {
   } catch {
     return param.trim();
   }
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ author: string }>;
+}): Promise<Metadata> {
+  const resolved = await params;
+  const authorName = decodeAuthorParam(resolved.author).replace(/^@/, "");
+
+  return {
+    title: `@${authorName}`,
+    description: `Analyze download stats for npm author @${authorName}.`,
+    openGraph: {
+      title: `@${authorName}`,
+      description: `Analyze download stats for npm author @${authorName}.`,
+      images: ["/og/author.png"],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `@${authorName}`,
+      description: `Analyze download stats for npm author @${authorName}.`,
+      images: ["/og/author.png"],
+    },
+  };
 }
 
 export default async function AuthorPage({
