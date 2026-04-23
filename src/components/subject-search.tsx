@@ -16,6 +16,7 @@ import { ThemePresetSwitcher } from "@/components/theme-preset-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { defaultDateRange } from "@/lib/npm/date";
 import { encodePackagePath } from "@/lib/npm/routes";
 import { INTERVALS } from "@/lib/npm/types";
@@ -185,15 +186,17 @@ export function SubjectSearch({
     async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       setIsSubmittingSearch(true);
+      const formData = new FormData(event.currentTarget);
+      const nextSubject = formData.get("subject") === "author" ? "author" : "package";
       const started =
-        subject === "author"
-          ? await submitToAuthor(new FormData(event.currentTarget))
-          : await submitToPackage(new FormData(event.currentTarget));
+        nextSubject === "author"
+          ? await submitToAuthor(formData)
+          : await submitToPackage(formData);
       if (!started) {
         setIsSubmittingSearch(false);
       }
     },
-    [subject, submitToAuthor, submitToPackage]
+    [submitToAuthor, submitToPackage]
   );
 
   useEffect(() => {
@@ -272,11 +275,18 @@ function SearchForm({
   onCancel?: () => void;
   onSubmit?: (event: React.FormEvent<HTMLFormElement>) => void;
 }) {
+  const [selectedSubject, setSelectedSubject] = useState<"author" | "package">(
+    subject
+  );
   const [formState, setFormState] = useState({
     from: initialFrom,
     query: initialQuery,
     to: initialTo,
   });
+
+  useEffect(() => {
+    setSelectedSubject(subject);
+  }, [subject]);
 
   const handleFieldChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -294,12 +304,31 @@ function SearchForm({
       className="mt-8 grid grid-cols-2 gap-2 md:grid-cols-12"
       onSubmit={onSubmit}
     >
+      <input name="subject" type="hidden" value={selectedSubject} readOnly />
+      <Tabs
+        value={selectedSubject}
+        onValueChange={(value) => {
+          if (value === "author" || value === "package") {
+            setSelectedSubject(value);
+          }
+        }}
+        className="col-span-2 w-full md:col-span-2"
+      >
+        <TabsList className="w-full">
+          <TabsTrigger value="author" className="cursor-pointer">
+            Author
+          </TabsTrigger>
+          <TabsTrigger value="package" className="cursor-pointer">
+            Package
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
       <Input
         name="query"
-        placeholder={subject === "author" ? "npm author" : "npm package name"}
+        placeholder={selectedSubject === "author" ? "npm author" : "npm package name"}
         value={formState.query}
         onChange={handleFieldChange}
-        className={cn("col-span-2 cursor-pointer bg-background md:col-span-6")}
+        className={cn("col-span-2 cursor-pointer bg-background md:col-span-4")}
       />
       <Input
         name="from"

@@ -137,6 +137,16 @@ function chunkPackagesForWindow(packages: string[], window: ShardWindow) {
   let currentChunk: string[] = [];
 
   for (const packageName of [...packages].toSorted()) {
+    if (packageName.startsWith("@")) {
+      if (currentChunk.length > 0) {
+        chunks.push(currentChunk);
+        currentChunk = [];
+      }
+
+      chunks.push([packageName]);
+      continue;
+    }
+
     const nextChunk = [...currentChunk, packageName];
     if (
       buildUrl(nextChunk, window).length > BULK_URL_SOFT_LIMIT &&

@@ -199,18 +199,23 @@ export function DownloadsChart({
                 />
               </linearGradient>
             </defs>
-            <CartesianGrid vertical={false} strokeDasharray="4 4" />
+            <CartesianGrid
+              vertical={false}
+              stroke="var(--foreground)"
+              strokeOpacity={loading ? 0 : 0.2}
+              strokeDasharray="4 4"
+            />
             <XAxis
               dataKey="date"
               minTickGap={32}
               tickFormatter={formatXAxisLabel}
-              tickLine={false}
-              axisLine={false}
+              tickLine={{ stroke: "var(--border)", strokeOpacity: loading ? 0 : 0.65 }}
+              axisLine={{ stroke: "var(--border)", strokeOpacity: loading ? 0 : 0.65 }}
             />
             <YAxis
               tickFormatter={formatYAxisLabel}
-              tickLine={false}
-              axisLine={false}
+              tickLine={{ stroke: "var(--border)", strokeOpacity: loading ? 0 : 0.65 }}
+              axisLine={{ stroke: "var(--border)", strokeOpacity: loading ? 0 : 0.65 }}
               width={56}
             />
             <ChartTooltip
@@ -229,6 +234,12 @@ export function DownloadsChart({
               fill={`url(#${gradientId})`}
               strokeWidth={2}
               isAnimationActive={!loading}
+              dot={{
+                r: 2.5,
+                fill: "var(--chart-1)",
+                stroke: "var(--card)",
+                strokeWidth: 1.5,
+              }}
               activeDot={{
                 r: 4,
                 fill: "var(--chart-1)",
