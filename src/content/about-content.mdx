@@ -1,0 +1,31 @@
+# About
+
+npm downloads is a focused interface for exploring npm package and author download trends without extra clutter.
+
+## What it does
+
+- search for **packages** and **authors**
+- compare different date ranges and intervals
+- stream large author histories progressively so results appear as they load
+- surface package and maintainer context in the same flow
+
+## Why this exists
+
+The goal is to keep npm analytics fast, readable, and close to the data you actually care about.
+
+Instead of building a huge dashboard, the app keeps the interaction model simple:
+
+- one search flow
+- one chart surface
+- one clear package/author context at a time
+
+## Notes
+
+- package pages show package-level metadata and download history
+- author pages aggregate maintained packages and progressively fill in totals
+- large author requests may continue resolving in the background while the UI updates incrementally
+
+## Links
+
+- [GitHub repository](https://github.com/tunnckoCore/npm-downloads-nextjs)
+- [npm downloads API](https://api.npmjs.org)

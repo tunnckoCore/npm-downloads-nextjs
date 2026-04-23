@@ -1,8 +1,7 @@
 import { Suspense } from "react";
 
+import { HeaderControls } from "@/components/header-controls";
 import { LandingSearchForm } from "@/components/landing-search-form";
-import { ThemePresetSwitcher } from "@/components/theme-preset-switcher";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,10 +19,7 @@ export function LandingSearch() {
           </p>
         </div>
 
-        <div className="flex w-full items-center gap-2 sm:w-auto">
-          <ThemePresetSwitcher />
-          <ThemeToggle />
-        </div>
+        <HeaderControls />
       </div>
 
       <Suspense fallback={<LandingSearchFormFallback />}>
