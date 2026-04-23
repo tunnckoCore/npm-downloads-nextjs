@@ -6,7 +6,6 @@ import {
   AreaChart,
   CartesianGrid,
   ReferenceArea,
-  ResponsiveContainer,
   XAxis,
   YAxis,
 } from "recharts";
@@ -177,76 +176,85 @@ export function DownloadsChart({
         }}
         className="h-80 w-full bg-card select-none md:h-96"
       >
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
-            data={visibleSeries}
-            margin={{ top: 12, right: 20, left: 12, bottom: 0 }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-          >
-            <defs>
-              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--chart-1)"
-                  stopOpacity={0.4}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--chart-1)"
-                  stopOpacity={0.05}
-                />
-              </linearGradient>
-            </defs>
-            <CartesianGrid vertical={false} strokeDasharray="4 4" />
-            <XAxis
-              dataKey="date"
-              minTickGap={32}
-              tickFormatter={formatXAxisLabel}
-              tickLine={false}
-              axisLine={false}
-            />
-            <YAxis
-              tickFormatter={formatYAxisLabel}
-              tickLine={false}
-              axisLine={false}
-              width={56}
-            />
-            <ChartTooltip
-              cursor={false}
-              content={
-                <ChartTooltipContent
-                  formatter={formatTooltipValue}
-                  labelFormatter={formatTooltipLabel}
-                />
-              }
-            />
-            <Area
-              type="monotone"
-              dataKey="downloads"
-              stroke="var(--chart-1)"
-              fill={`url(#${gradientId})`}
-              strokeWidth={2}
-              isAnimationActive={!loading}
-              activeDot={{
-                r: 4,
-                fill: "var(--chart-1)",
-                stroke: "var(--card)",
-                strokeWidth: 2,
-              }}
-            />
-            {hasSelection ? (
-              <ReferenceArea
-                x1={dragStart}
-                x2={dragEnd ?? dragStart}
-                fill="var(--accent)"
-                fillOpacity={0.24}
-                stroke="var(--accent)"
+        <AreaChart
+          data={visibleSeries}
+          margin={{ top: 12, right: 20, left: 12, bottom: 0 }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+        >
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop
+                offset="5%"
+                stopColor="var(--chart-1)"
+                stopOpacity={0.4}
               />
-            ) : null}
-          </AreaChart>
-        </ResponsiveContainer>
+              <stop
+                offset="95%"
+                stopColor="var(--chart-1)"
+                stopOpacity={0.05}
+              />
+            </linearGradient>
+          </defs>
+          <CartesianGrid
+            vertical={false}
+            stroke="var(--foreground)"
+            strokeOpacity={loading ? 0 : 0.2}
+            strokeDasharray="4 4"
+          />
+          <XAxis
+            dataKey="date"
+            minTickGap={32}
+            tickFormatter={formatXAxisLabel}
+            tickLine={{ stroke: "var(--border)", strokeOpacity: loading ? 0 : 0.65 }}
+            axisLine={{ stroke: "var(--border)", strokeOpacity: loading ? 0 : 0.65 }}
+          />
+          <YAxis
+            tickFormatter={formatYAxisLabel}
+            tickLine={{ stroke: "var(--border)", strokeOpacity: loading ? 0 : 0.65 }}
+            axisLine={{ stroke: "var(--border)", strokeOpacity: loading ? 0 : 0.65 }}
+            width={56}
+          />
+          <ChartTooltip
+            cursor={false}
+            content={
+              <ChartTooltipContent
+                formatter={formatTooltipValue}
+                labelFormatter={formatTooltipLabel}
+              />
+            }
+          />
+          <Area
+            type="monotone"
+            dataKey="downloads"
+            stroke="var(--chart-1)"
+            fill={`url(#${gradientId})`}
+            strokeWidth={2}
+            isAnimationActive={!loading}
+            dot={{
+              r: 2.5,
+              fill: "var(--chart-1)",
+              stroke: "var(--card)",
+              strokeWidth: 1.5,
+            }}
+            activeDot={{
+              r: 4,
+              fill: "var(--chart-1)",
+              stroke: "var(--card)",
+              strokeWidth: 2,
+            }}
+          />
+          {hasSelection ? (
+            <ReferenceArea
+              x1={dragStart}
+              x2={dragEnd ?? dragStart}
+              fill="var(--accent)"
+              fillOpacity={0.24}
+              stroke="var(--accent)"
+            />
+          ) : null}
+        </AreaChart>
       </ChartContainer>
     </div>
   );

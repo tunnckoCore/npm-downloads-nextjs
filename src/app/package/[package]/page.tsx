@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 
 import { PackagePageClient } from "@/components/package-page-client";
+import { getPackageMetadata } from "@/lib/npm/metadata";
 import { decodePackageParam } from "@/lib/npm/routes";
 import { cachedPackageExists } from "@/lib/package-exists.server";
 
@@ -18,5 +19,14 @@ export default async function PackagePage({
     redirect("/");
   }
 
-  return <PackagePageClient packageName={packageName} />;
+  const initialMetadata = await getPackageMetadata(packageName).catch(
+    () => null
+  );
+
+  return (
+    <PackagePageClient
+      packageName={packageName}
+      initialMetadata={initialMetadata}
+    />
+  );
 }
