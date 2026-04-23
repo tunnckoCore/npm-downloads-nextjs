@@ -1,15 +1,21 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 import { DownloadsChart } from "@/components/downloads-chart";
 import { SubjectSearch } from "@/components/subject-search";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { mergeSeriesChunks } from "@/lib/npm/aggregate";
+import {
+  cancelAuthorDownloads,
+  makeAuthorDownloadsCacheKey,
+  subscribeAuthorDownloads,
+  unsubscribeAuthorDownloads,
+  useAuthorDownloadsEntry,
+} from "@/lib/npm/author-downloads-store";
 import { defaultDateRange } from "@/lib/npm/date";
 import type {
   AuthorDownloadsPayload,
@@ -26,120 +32,6 @@ const intervalOptions = [
 ] as const;
 
 const AUTHOR_LIST_PAGE_SIZE = 50;
-const AUTHOR_DOWNLOADS_STORAGE_KEY = "npm-downloads:author-downloads";
-
-function makeAuthorDownloadsCacheKey(
-  authorName: string,
-  from: string,
-  to: string,
-  interval: AuthorDownloadsPayload["interval"]
-) {
-  return ["author-downloads", authorName, from, to, interval].join(":");
-}
-
-function readStoredAuthorPayload(cacheKey: string) {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  try {
-    const raw = window.sessionStorage.getItem(AUTHOR_DOWNLOADS_STORAGE_KEY);
-    if (!raw) {
-      return null;
-    }
-
-    const payloads = JSON.parse(raw) as Record<string, AuthorDownloadsPayload>;
-    return payloads[cacheKey] ?? null;
-  } catch {
-    return null;
-  }
-}
-
-function storeAuthorPayload(cacheKey: string, payload: AuthorDownloadsPayload) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    const raw = window.sessionStorage.getItem(AUTHOR_DOWNLOADS_STORAGE_KEY);
-    const payloads = raw
-      ? (JSON.parse(raw) as Record<string, AuthorDownloadsPayload>)
-      : {};
-
-    payloads[cacheKey] = payload;
-    window.sessionStorage.setItem(
-      AUTHOR_DOWNLOADS_STORAGE_KEY,
-      JSON.stringify(payloads)
-    );
-  } catch {
-    // Ignore session storage failures.
-  }
-}
-
-async function readJson<T>(input: RequestInfo, init?: RequestInit) {
-  const response = await fetch(input, init);
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as {
-      error?: string;
-    } | null;
-    throw new Error(payload?.error ?? `Request failed with ${response.status}`);
-  }
-
-  return (await response.json()) as T;
-}
-
-function emptyPayload(
-  authorName: string,
-  packageCount: number,
-  from: string,
-  to: string,
-  interval: AuthorDownloadsPayload["interval"]
-): AuthorDownloadsPayload {
-  return {
-    author: authorName,
-    interval,
-    packageCount,
-    range: { from, to },
-    packageDownloads: {},
-    series: [],
-    summary: {
-      totalDownloads: 0,
-      averageDailyDownloads: 0,
-      totalDays: 0,
-      peakDay: null,
-    },
-  };
-}
-
-function mergePackageDownloads(
-  current: Record<string, number>,
-  incoming: Record<string, number>
-) {
-  return {
-    ...current,
-    ...incoming,
-  };
-}
-
-function mergeSummaries(
-  current: AuthorDownloadsPayload["summary"],
-  incoming: AuthorDownloadsPayload["summary"]
-): AuthorDownloadsPayload["summary"] {
-  const totalDownloads = current.totalDownloads + incoming.totalDownloads;
-  const totalDays = Math.max(current.totalDays, incoming.totalDays);
-  const peakDay =
-    !current.peakDay ||
-    (incoming.peakDay && incoming.peakDay.downloads > current.peakDay.downloads)
-      ? incoming.peakDay
-      : current.peakDay;
-
-  return {
-    totalDownloads,
-    totalDays,
-    peakDay,
-    averageDailyDownloads: totalDays === 0 ? 0 : totalDownloads / totalDays,
-  };
-}
 
 export function AuthorPageClient({
   authorName,
@@ -154,10 +46,6 @@ export function AuthorPageClient({
     to: parseAsString.withDefault(defaults.to),
     interval: parseAsStringLiteral(INTERVALS).withDefault("monthly"),
   });
-  const [displayPayload, setDisplayPayload] =
-    useState<AuthorDownloadsPayload | null>(null);
-  const [streamError, setStreamError] = useState<string | null>(null);
-  const [isStreaming, setIsStreaming] = useState(true);
   const [loadingSource, setLoadingSource] = useState<
     "interval" | "search" | null
   >(null);
@@ -165,25 +53,47 @@ export function AuthorPageClient({
 
   const displayPayloadRef = useRef<AuthorDownloadsPayload | null>(null);
   const previousDisplayPayloadRef = useRef<AuthorDownloadsPayload | null>(null);
-  const completedPayloadsRef = useRef(new Map<string, AuthorDownloadsPayload>());
-  const eventSourceRef = useRef<EventSource | null>(null);
-  const fallbackAbortRef = useRef<AbortController | null>(null);
-  const cancelledRef = useRef(false);
-  const restoreDownloadsKeyRef = useRef<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const downloadsJsonUrl = `/api/v1/author/${encodeURIComponent(authorName)}/downloads?from=${queryState.from}&to=${queryState.to}&interval=${queryState.interval}`;
-  const streamUrl = `/api/v1/author/${encodeURIComponent(authorName)}/downloads/stream?from=${queryState.from}&to=${queryState.to}&interval=${queryState.interval}`;
   const downloadsCacheKey = makeAuthorDownloadsCacheKey(
     authorName,
     queryState.from,
     queryState.to,
     queryState.interval
   );
+  const currentEntry = useAuthorDownloadsEntry(downloadsCacheKey);
+  const displayPayload = currentEntry?.payload ?? null;
+  const isStreaming = currentEntry?.status === "streaming";
+  const streamError = currentEntry?.error ?? null;
+
+  useEffect(() => {
+    previousDisplayPayloadRef.current = displayPayloadRef.current;
+  }, [downloadsCacheKey]);
 
   useEffect(() => {
     displayPayloadRef.current = displayPayload;
   }, [displayPayload]);
+
+  useEffect(() => {
+    subscribeAuthorDownloads({
+      authorName,
+      from: queryState.from,
+      interval: queryState.interval,
+      packages,
+      to: queryState.to,
+    });
+
+    return () => {
+      unsubscribeAuthorDownloads(downloadsCacheKey);
+    };
+  }, [
+    authorName,
+    downloadsCacheKey,
+    packages,
+    queryState.from,
+    queryState.interval,
+    queryState.to,
+  ]);
 
   useEffect(() => {
     setVisibleCount(AUTHOR_LIST_PAGE_SIZE);
@@ -216,212 +126,27 @@ export function AuthorPageClient({
     };
   }, [packages.length, visibleCount]);
 
-  useEffect(() => {
-    cancelledRef.current = false;
-    eventSourceRef.current?.close();
-    eventSourceRef.current = null;
-    fallbackAbortRef.current?.abort();
-    fallbackAbortRef.current = null;
-    previousDisplayPayloadRef.current = displayPayloadRef.current;
-
-    const cachedCompletedPayload =
-      completedPayloadsRef.current.get(downloadsCacheKey) ??
-      readStoredAuthorPayload(downloadsCacheKey);
-    const isRestoringCompletedPayload =
-      restoreDownloadsKeyRef.current === downloadsCacheKey;
-
-    if (cachedCompletedPayload) {
-      completedPayloadsRef.current.set(downloadsCacheKey, cachedCompletedPayload);
-      setDisplayPayload(cachedCompletedPayload);
-    }
-
-    if (isRestoringCompletedPayload) {
-      restoreDownloadsKeyRef.current = null;
-      setLoadingSource(null);
-      setIsStreaming(false);
-      setStreamError(null);
-      return;
-    }
-
-    if (!cachedCompletedPayload) {
-      setDisplayPayload(
-        emptyPayload(
-          authorName,
-          packages.length,
-          queryState.from,
-          queryState.to,
-          queryState.interval
-        )
-      );
-    }
-
-    setIsStreaming(true);
-    setStreamError(null);
-
-    const eventSource = new EventSource(streamUrl);
-    eventSourceRef.current = eventSource;
-    let completed = false;
-
-    eventSource.addEventListener("series_chunk", (event) => {
-      if (cancelledRef.current) {
-        return;
-      }
-
-      const payload = JSON.parse((event as MessageEvent<string>).data) as {
-        packageDownloads: Record<string, number>;
-        series: AuthorDownloadsPayload["series"];
-        summary: AuthorDownloadsPayload["summary"];
-      };
-
-      setDisplayPayload((current) => {
-        const base =
-          current ??
-          emptyPayload(
-            authorName,
-            packages.length,
-            queryState.from,
-            queryState.to,
-            queryState.interval
-          );
-
-        return {
-          ...base,
-          packageDownloads: mergePackageDownloads(
-            base.packageDownloads,
-            payload.packageDownloads
-          ),
-          series: mergeSeriesChunks(base.series, payload.series),
-          summary: mergeSummaries(base.summary, payload.summary),
-        };
-      });
-    });
-
-    eventSource.addEventListener("done", (event) => {
-      if (cancelledRef.current) {
-        return;
-      }
-
-      const payload = JSON.parse(
-        (event as MessageEvent<string>).data
-      ) as AuthorDownloadsPayload;
-      completed = true;
-      completedPayloadsRef.current.set(downloadsCacheKey, payload);
-      storeAuthorPayload(downloadsCacheKey, payload);
-      setDisplayPayload(payload);
-      setLoadingSource(null);
-      setIsStreaming(false);
-      setStreamError(null);
-      eventSourceRef.current = null;
-      eventSource.close();
-    });
-
-    eventSource.addEventListener("stream_error", (event) => {
-      if (cancelledRef.current) {
-        return;
-      }
-
-      const payload = JSON.parse((event as MessageEvent<string>).data) as {
-        message?: string;
-      };
-      completed = true;
-      eventSourceRef.current = null;
-      eventSource.close();
-      setLoadingSource(null);
-      setStreamError(payload.message ?? "Unable to stream author history.");
-      setIsStreaming(false);
-    });
-
-    eventSource.addEventListener("error", () => {
-      if (completed || cancelledRef.current) {
-        return;
-      }
-
-      eventSourceRef.current = null;
-      eventSource.close();
-
-      const abortController = new AbortController();
-      fallbackAbortRef.current = abortController;
-
-      readJson<AuthorDownloadsPayload>(downloadsJsonUrl, {
-        signal: abortController.signal,
-      })
-        .then((payload) => {
-          if (cancelledRef.current) {
-            return;
-          }
-
-          completedPayloadsRef.current.set(downloadsCacheKey, payload);
-          storeAuthorPayload(downloadsCacheKey, payload);
-          setDisplayPayload(payload);
-          setLoadingSource(null);
-          setStreamError(null);
-        })
-        .catch((error) => {
-          if (abortController.signal.aborted) {
-            return;
-          }
-
-          setStreamError(
-            error instanceof Error
-              ? error.message
-              : "Unable to load author history."
-          );
-        })
-        .finally(() => {
-          if (fallbackAbortRef.current === abortController) {
-            fallbackAbortRef.current = null;
-          }
-          if (!cancelledRef.current) {
-            setLoadingSource(null);
-            setIsStreaming(false);
-          }
-        });
-    });
-
-    return () => {
-      eventSourceRef.current = null;
-      eventSource.close();
-    };
-  }, [
-    authorName,
-    downloadsCacheKey,
-    downloadsJsonUrl,
-    packages.length,
-    queryState.from,
-    queryState.interval,
-    queryState.to,
-    streamUrl,
-  ]);
-
-  const downloads = displayPayload;
   const hasProgress =
     (displayPayload?.series.length ?? 0) > 0 ||
     (displayPayload?.summary.totalDownloads ?? 0) > 0;
   const visiblePayload =
     isStreaming && previousDisplayPayloadRef.current && !hasProgress
       ? previousDisplayPayloadRef.current
-      : downloads;
+      : displayPayload;
   const deferredSeries = useDeferredValue(visiblePayload?.series ?? []);
-  const visibleSummaryPayload = visiblePayload;
   const visiblePackageDownloads = visiblePayload?.packageDownloads ?? {};
   const visiblePackages = useMemo(
     () => packages.slice(0, visibleCount),
     [packages, visibleCount]
   );
-  const hasResolvedPayload =
-    (visiblePayload?.series.length ?? 0) > 0 ||
-    (visiblePayload?.summary.totalDownloads ?? 0) > 0;
-  const hasCompletedPayloadForCurrentKey = completedPayloadsRef.current.has(
-    downloadsCacheKey
-  );
-  const shouldPulseSummary =
-    isStreaming && !hasCompletedPayloadForCurrentKey;
+  const shouldPulseSummary = isStreaming;
   const isInitialLoading =
     isStreaming &&
     !previousDisplayPayloadRef.current &&
     (displayPayload?.series.length ?? 0) === 0;
 
   const handleIntervalClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    cancelAuthorDownloads(downloadsCacheKey);
     setLoadingSource("interval");
     setQueryState({
       interval: event.currentTarget.value as (typeof INTERVALS)[number],
@@ -429,24 +154,14 @@ export function AuthorPageClient({
   };
 
   const handleSearchTransitionStart = () => {
+    cancelAuthorDownloads(downloadsCacheKey);
     setLoadingSource("search");
   };
 
   const handleCancelLoading = () => {
-    cancelledRef.current = true;
-    eventSourceRef.current?.close();
-    eventSourceRef.current = null;
-    fallbackAbortRef.current?.abort();
-    fallbackAbortRef.current = null;
+    cancelAuthorDownloads(downloadsCacheKey);
 
     if (previousDisplayPayloadRef.current) {
-      restoreDownloadsKeyRef.current = makeAuthorDownloadsCacheKey(
-        authorName,
-        previousDisplayPayloadRef.current.range.from,
-        previousDisplayPayloadRef.current.range.to,
-        previousDisplayPayloadRef.current.interval
-      );
-      setDisplayPayload(previousDisplayPayloadRef.current);
       setQueryState({
         from: previousDisplayPayloadRef.current.range.from,
         to: previousDisplayPayloadRef.current.range.to,
@@ -455,8 +170,6 @@ export function AuthorPageClient({
     }
 
     setLoadingSource(null);
-    setIsStreaming(false);
-    setStreamError(null);
   };
 
   const packageQueryString = new URLSearchParams({
@@ -488,8 +201,8 @@ export function AuthorPageClient({
                   : "text-lg font-bold italic sm:text-xl"
               }
             >
-              {visibleSummaryPayload
-                ? formatCompactNumber(visibleSummaryPayload.summary.totalDownloads)
+              {visiblePayload
+                ? formatCompactNumber(visiblePayload.summary.totalDownloads)
                 : "0"}{" "}
               downloads
             </span>
@@ -534,26 +247,26 @@ export function AuthorPageClient({
 
           {isInitialLoading ? (
             <div className="absolute inset-0 flex items-center justify-center bg-transparent">
-              <div className="flex flex-col items-center justify-center space-y-6 py-20 animate-in fade-in duration-500">
+              <div className="flex animate-in fade-in flex-col items-center justify-center space-y-6 py-20 duration-500">
                 <div className="relative flex h-16 w-16 items-center justify-center">
                   <div
-                    className="absolute inset-0 rounded-full border-t-2 border-primary opacity-80 animate-spin"
+                    className="absolute inset-0 animate-spin rounded-full border-t-2 border-primary opacity-80"
                     style={{ animationDuration: "1s" }}
                   />
                   <div
-                    className="absolute inset-2 rounded-full border-r-2 border-primary opacity-50 animate-spin"
+                    className="absolute inset-2 animate-spin rounded-full border-r-2 border-primary opacity-50"
                     style={{
-                      animationDuration: "1.5s",
                       animationDirection: "reverse",
+                      animationDuration: "1.5s",
                     }}
                   />
                   <div
-                    className="absolute inset-4 rounded-full border-b-2 border-primary opacity-30 animate-spin"
+                    className="absolute inset-4 animate-spin rounded-full border-b-2 border-primary opacity-30"
                     style={{ animationDuration: "2s" }}
                   />
-                  <div className="absolute inset-6 rounded-full border-b-2 border-primary animate-spin" />
+                  <div className="absolute inset-6 animate-spin rounded-full border-b-2 border-primary" />
                 </div>
-                <div className="animate-pulse flex flex-col items-center space-y-1">
+                <div className="flex animate-pulse flex-col items-center space-y-1">
                   <div className="text-lg font-medium tracking-tight text-foreground/80">
                     Crunching author downloads...
                   </div>
