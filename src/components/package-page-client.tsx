@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowSquareOutIcon } from "@phosphor-icons/react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
 import {
@@ -66,6 +66,10 @@ function makeDownloadsCacheKey(
   return ["package-downloads", packageName, from, to, interval].join(":");
 }
 
+function sumSeriesDownloads(series: PackageDownloadsPayload["series"]) {
+  return series.reduce((sum, point) => sum + point.downloads, 0);
+}
+
 async function readJson<T>(input: RequestInfo, init?: RequestInit) {
   const response = await fetch(input, init);
   if (!response.ok) {
@@ -101,7 +105,13 @@ const emptyPayload = (
   },
 });
 
-export function PackagePageClient({ packageName }: { packageName: string }) {
+export function PackagePageClient({
+  packageName,
+  initialMetadata,
+}: {
+  packageName: string;
+  initialMetadata: PackageMetadata | null;
+}) {
   const queryClient = useQueryClient();
   const defaults = useMemo(() => defaultDateRange(), []);
   const [queryState, setQueryState] = useQueryStates({
@@ -148,11 +158,6 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
     queryState.to,
     queryState.interval
   );
-
-  const metadataQuery = useQuery({
-    queryKey: ["package-metadata", packageName],
-    queryFn: () => readJson<PackageMetadata>(buildBasePath(packageName)),
-  });
 
   const handleSeriesChunk = useCallback(
     (payload: {
@@ -397,14 +402,31 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
   ]);
 
   const downloads = displayPayload;
-  const deferredSeries = useDeferredValue(displayPayload?.series ?? []);
-  const visibleSummaryPayload =
-    isStreaming && previousDisplayPayloadRef.current
+  const hasProgress =
+    (displayPayload?.series.length ?? 0) > 0 ||
+    (displayPayload?.summary.totalDownloads ?? 0) > 0;
+  const visiblePayload =
+    isStreaming && previousDisplayPayloadRef.current && !hasProgress
       ? previousDisplayPayloadRef.current
       : downloads;
+  const deferredSeries = useDeferredValue(visiblePayload?.series ?? []);
+  const hasCompletedPayloadForCurrentKey = completedPayloadsRef.current.has(
+    downloadsCacheKey
+  );
+  const visibleTotalDownloads = useMemo(() => {
+    if (!visiblePayload) {
+      return 0;
+    }
+
+    if (visiblePayload.summary.totalDownloads > 0) {
+      return visiblePayload.summary.totalDownloads;
+    }
+
+    return sumSeriesDownloads(visiblePayload.series);
+  }, [visiblePayload]);
   const orderedMaintainers = useMemo(
-    () => prioritizeMaintainers(metadataQuery.data?.maintainers ?? []),
-    [metadataQuery.data?.maintainers]
+    () => prioritizeMaintainers(initialMetadata?.maintainers ?? []),
+    [initialMetadata?.maintainers]
   );
   const visibleAuthors = orderedMaintainers.slice(0, 3);
   const hiddenAuthorsCount = Math.max(
@@ -417,6 +439,8 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
     loadingSource === null &&
     previousDisplayPayloadRef.current === null &&
     completedPayloadsRef.current.size === 0;
+  const shouldPulseSummary =
+    isStreaming && !hasCompletedPayloadForCurrentKey;
 
   const handleIntervalClick = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -444,15 +468,14 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
 
       <section className="flex flex-col items-start justify-between gap-4 py-4 sm:flex-row sm:items-center">
         <div className="flex flex-col gap-1">
-          {metadataQuery.data?.npmUrl ? (
+          {initialMetadata?.npmUrl ? (
             <Link
-              href={metadataQuery.data.npmUrl}
+              href={initialMetadata.npmUrl}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 uppercase text-2xl font-extrabold tracking-tight text-foreground transition-colors hover:text-muted-foreground sm:text-3xl"
             >
-              {metadataQuery.data.name?.toUpperCase()}{" "}
-              <ArrowSquareOutIcon className="h-4 w-4" />
+              {initialMetadata.name?.toUpperCase()} <ArrowSquareOutIcon className="h-4 w-4" />
             </Link>
           ) : (
             <h2 className="text-2xl font-extrabold uppercase tracking-tight text-foreground sm:text-3xl">
@@ -463,17 +486,12 @@ export function PackagePageClient({ packageName }: { packageName: string }) {
           <div className="flex flex-wrap items-baseline gap-2 text-muted-foreground">
             <span
               className={
-                isStreaming
+                shouldPulseSummary
                   ? "animate-pulse text-lg font-bold italic sm:text-xl"
                   : "text-lg font-bold italic sm:text-xl"
               }
             >
-              {visibleSummaryPayload
-                ? formatCompactNumber(
-                    visibleSummaryPayload.summary.totalDownloads
-                  )
-                : "0"}{" "}
-              downloads
+              {formatCompactNumber(visibleTotalDownloads)} downloads
             </span>
 
             {visibleAuthors.length > 0 ? (
