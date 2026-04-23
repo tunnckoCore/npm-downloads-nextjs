@@ -410,9 +410,8 @@ export function PackagePageClient({
       ? previousDisplayPayloadRef.current
       : downloads;
   const deferredSeries = useDeferredValue(visiblePayload?.series ?? []);
-  const hasCompletedPayloadForCurrentKey = completedPayloadsRef.current.has(
-    downloadsCacheKey
-  );
+  const hasCompletedPayloadForCurrentKey =
+    completedPayloadsRef.current.has(downloadsCacheKey);
   const visibleTotalDownloads = useMemo(() => {
     if (!visiblePayload) {
       return 0;
@@ -439,8 +438,7 @@ export function PackagePageClient({
     loadingSource === null &&
     previousDisplayPayloadRef.current === null &&
     completedPayloadsRef.current.size === 0;
-  const shouldPulseSummary =
-    isStreaming && !hasCompletedPayloadForCurrentKey;
+  const shouldPulseSummary = isStreaming && !hasCompletedPayloadForCurrentKey;
 
   const handleIntervalClick = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -475,7 +473,8 @@ export function PackagePageClient({
               rel="noreferrer"
               className="inline-flex items-center gap-2 uppercase text-2xl font-extrabold tracking-tight text-foreground transition-colors hover:text-muted-foreground sm:text-3xl"
             >
-              {initialMetadata.name?.toUpperCase()} <ArrowSquareOutIcon className="h-4 w-4" />
+              {initialMetadata.name?.toUpperCase()}{" "}
+              <ArrowSquareOutIcon className="h-4 w-4" />
             </Link>
           ) : (
             <h2 className="text-2xl font-extrabold uppercase tracking-tight text-foreground sm:text-3xl">

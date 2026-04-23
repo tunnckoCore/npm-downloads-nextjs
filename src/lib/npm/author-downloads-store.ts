@@ -3,10 +3,7 @@
 import { create } from "zustand";
 
 import { mergeSeriesChunks } from "@/lib/npm/aggregate";
-import type {
-  AuthorDownloadsPayload,
-  AuthorPackage,
-} from "@/lib/npm/author";
+import type { AuthorDownloadsPayload, AuthorPackage } from "@/lib/npm/author";
 import type { Interval } from "@/lib/npm/types";
 
 const AUTHOR_DOWNLOADS_STORAGE_PREFIX = "npm-downloads:author-downloads:v2:";
@@ -132,7 +129,9 @@ function readJson<T>(input: RequestInfo, init?: RequestInit) {
       const payload = (await response.json().catch(() => null)) as {
         error?: string;
       } | null;
-      throw new Error(payload?.error ?? `Request failed with ${response.status}`);
+      throw new Error(
+        payload?.error ?? `Request failed with ${response.status}`
+      );
     }
 
     return (await response.json()) as T;
@@ -148,9 +147,7 @@ function setAuthorDownloadsEntry(
   useAuthorDownloadsStore.setState((state) => {
     const current = state.entries[cacheKey] ?? null;
     const nextEntry =
-      typeof updater === "function"
-        ? updater(current)
-        : updater;
+      typeof updater === "function" ? updater(current) : updater;
 
     return {
       entries: {
@@ -173,8 +170,7 @@ function readPersistedAuthorDownloadsEntry(cacheKey: string) {
       return {
         cacheKey,
         error: persisted.error,
-        isHydratedPartial:
-          !persisted.isComplete && persisted.payload !== null,
+        isHydratedPartial: !persisted.isComplete && persisted.payload !== null,
         payload: persisted.payload,
         progress: persisted.progress,
         status: persisted.isComplete ? "complete" : "streaming",
@@ -186,7 +182,9 @@ function readPersistedAuthorDownloadsEntry(cacheKey: string) {
   }
 
   try {
-    const raw = window.sessionStorage.getItem(LEGACY_AUTHOR_DOWNLOADS_STORAGE_KEY);
+    const raw = window.sessionStorage.getItem(
+      LEGACY_AUTHOR_DOWNLOADS_STORAGE_KEY
+    );
     if (!raw) {
       return null;
     }
@@ -328,18 +326,24 @@ function startAuthorDownloadsStream(
   cacheKey: string,
   input: AuthorDownloadsSubscriptionInput
 ) {
-  const existingEntry = useAuthorDownloadsStore.getState().entries[cacheKey] ?? null;
+  const existingEntry =
+    useAuthorDownloadsStore.getState().entries[cacheKey] ?? null;
   const downloadsJsonUrl = `/api/v1/author/${encodeURIComponent(input.authorName)}/downloads?from=${input.from}&to=${input.to}&interval=${input.interval}`;
   const streamUrl = `/api/v1/author/${encodeURIComponent(input.authorName)}/downloads/stream?from=${input.from}&to=${input.to}&interval=${input.interval}`;
   const runtime: AuthorDownloadsRuntime = {
     abortController: null,
     eventSource: null,
-    payload: existingEntry?.status === "complete" ? existingEntry.payload : null,
+    payload:
+      existingEntry?.status === "complete" ? existingEntry.payload : null,
     subscribers: 1,
   };
 
   authorDownloadsRuntimes.set(cacheKey, runtime);
-  setStreamingEntry(cacheKey, existingEntry?.payload ?? null, existingEntry?.progress ?? null);
+  setStreamingEntry(
+    cacheKey,
+    existingEntry?.payload ?? null,
+    existingEntry?.progress ?? null
+  );
 
   const eventSource = new EventSource(streamUrl);
   runtime.eventSource = eventSource;
@@ -461,7 +465,8 @@ function startAuthorDownloadsStream(
       signal: abortController.signal,
     })
       .then((payload) => {
-        const currentPayload = runtime.payload ?? existingEntry?.payload ?? null;
+        const currentPayload =
+          runtime.payload ?? existingEntry?.payload ?? null;
         const shouldKeepCurrentPayload =
           hasAuthorDownloadsProgress(currentPayload) &&
           !hasAuthorDownloadsProgress(payload);
@@ -497,7 +502,8 @@ function startAuthorDownloadsStream(
           return;
         }
 
-        const currentPayload = runtime.payload ?? existingEntry?.payload ?? null;
+        const currentPayload =
+          runtime.payload ?? existingEntry?.payload ?? null;
         const nextEntry: AuthorDownloadsEntry = {
           cacheKey,
           error: normalizeAuthorDownloadsErrorMessage(

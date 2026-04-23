@@ -185,11 +185,7 @@ export function DownloadsChart({
         >
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop
-                offset="5%"
-                stopColor="var(--chart-1)"
-                stopOpacity={0.4}
-              />
+              <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.4} />
               <stop
                 offset="95%"
                 stopColor="var(--chart-1)"
@@ -207,13 +203,25 @@ export function DownloadsChart({
             dataKey="date"
             minTickGap={32}
             tickFormatter={formatXAxisLabel}
-            tickLine={{ stroke: "var(--border)", strokeOpacity: loading ? 0 : 0.65 }}
-            axisLine={{ stroke: "var(--border)", strokeOpacity: loading ? 0 : 0.65 }}
+            tickLine={{
+              stroke: "var(--border)",
+              strokeOpacity: loading ? 0 : 0.65,
+            }}
+            axisLine={{
+              stroke: "var(--border)",
+              strokeOpacity: loading ? 0 : 0.65,
+            }}
           />
           <YAxis
             tickFormatter={formatYAxisLabel}
-            tickLine={{ stroke: "var(--border)", strokeOpacity: loading ? 0 : 0.65 }}
-            axisLine={{ stroke: "var(--border)", strokeOpacity: loading ? 0 : 0.65 }}
+            tickLine={{
+              stroke: "var(--border)",
+              strokeOpacity: loading ? 0 : 0.65,
+            }}
+            axisLine={{
+              stroke: "var(--border)",
+              strokeOpacity: loading ? 0 : 0.65,
+            }}
             width={56}
           />
           <ChartTooltip

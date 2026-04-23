@@ -10,7 +10,9 @@ export default function AuthorNotFound() {
 
       <Card>
         <CardHeader className="space-y-3">
-          <CardTitle className="text-2xl sm:text-3xl">Author not found</CardTitle>
+          <CardTitle className="text-2xl sm:text-3xl">
+            Author not found
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground sm:text-base">

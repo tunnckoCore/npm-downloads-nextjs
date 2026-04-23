@@ -187,7 +187,8 @@ export function SubjectSearch({
       event.preventDefault();
       setIsSubmittingSearch(true);
       const formData = new FormData(event.currentTarget);
-      const nextSubject = formData.get("subject") === "author" ? "author" : "package";
+      const nextSubject =
+        formData.get("subject") === "author" ? "author" : "package";
       const started =
         nextSubject === "author"
           ? await submitToAuthor(formData)
@@ -241,7 +242,9 @@ export function SubjectSearch({
       <SearchForm
         key={`${subject}:${authorName ?? packageName ?? ""}:${queryState.from}:${queryState.to}`}
         initialFrom={queryState.from}
-        initialQuery={subject === "author" ? authorName ?? "" : packageName ?? ""}
+        initialQuery={
+          subject === "author" ? (authorName ?? "") : (packageName ?? "")
+        }
         initialTo={queryState.to}
         isLoading={isLoading || isSubmittingSearch}
         isSearchDisabled={isSearchDisabled}
@@ -325,7 +328,9 @@ function SearchForm({
       </Tabs>
       <Input
         name="query"
-        placeholder={selectedSubject === "author" ? "npm author" : "npm package name"}
+        placeholder={
+          selectedSubject === "author" ? "npm author" : "npm package name"
+        }
         value={formState.query}
         onChange={handleFieldChange}
         className={cn("col-span-2 cursor-pointer bg-background md:col-span-4")}

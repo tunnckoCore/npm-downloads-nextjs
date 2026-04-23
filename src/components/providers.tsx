@@ -38,9 +38,7 @@ function getStoredTheme(): Theme | null {
   }
 
   const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
-  return storedTheme === "light" || storedTheme === "dark"
-    ? storedTheme
-    : null;
+  return storedTheme === "light" || storedTheme === "dark" ? storedTheme : null;
 }
 
 export function useTheme() {

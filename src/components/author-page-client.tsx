@@ -287,11 +287,11 @@ export function AuthorPageClient({
       </Card>
 
       <Card>
-        <CardHeader className="space-y-3">
+        <CardHeader className="space-y-4">
           <CardTitle className="text-2xl">@{authorName}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
+          <p className="pb-2 text-sm text-muted-foreground">
             Showing npm packages maintained by this author. Pick a package to
             open detailed download analytics.
           </p>
@@ -313,8 +313,8 @@ export function AuthorPageClient({
                     visiblePackageDownloads[pkg.name] ?? 0;
 
                   return (
-                    <li key={pkg.name} className="rounded-md border p-3">
-                      <div className="flex items-start justify-between gap-3">
+                    <li key={pkg.name} className="rounded-md border p-4">
+                      <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
                           <Link
                             href={`/package/${encodePackagePath(pkg.name)}?${packageQueryString}`}

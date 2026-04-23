@@ -1,4 +1,8 @@
-import { aggregateSeries, summarizeSeries, trimSeriesToRange } from "@/lib/npm/aggregate";
+import {
+  aggregateSeries,
+  summarizeSeries,
+  trimSeriesToRange,
+} from "@/lib/npm/aggregate";
 import { loadPackagesHistoryShards } from "@/lib/npm/batcher";
 import type { DateRange, Interval } from "@/lib/npm/types";
 import { fetchJsonWithRetry } from "@/lib/npm/upstream";
@@ -134,7 +138,8 @@ export async function buildAuthorDownloadsPayload(input: {
     };
   }
 
-  const packages = input.packages ?? (await fetchAuthorPackages(author, input.size));
+  const packages =
+    input.packages ?? (await fetchAuthorPackages(author, input.size));
   const packageNames = [...new Set(packages.map((pkg) => pkg.name))];
   if (packageNames.length === 0) {
     const dailySeries: { date: string; downloads: number }[] = [];

@@ -8,7 +8,11 @@ export class NpmUpstreamError extends Error {
   public readonly status: number;
   public readonly retryAfterMs: number | null;
 
-  constructor(message: string, status: number, retryAfterMs: number | null = null) {
+  constructor(
+    message: string,
+    status: number,
+    retryAfterMs: number | null = null
+  ) {
     super(message);
     this.name = "NpmUpstreamError";
     this.status = status;
@@ -165,10 +169,11 @@ export async function fetchJsonWithRetry<T>(url: string): Promise<T> {
 
       lastError = error;
       const baseDelay = RETRY_DELAYS_MS[attempt] ?? RETRY_DELAYS_MS.at(-1) ?? 0;
-      const waitDurationMs = withJitter(
-        Math.max(baseDelay, retryAfterMs ?? 0)
+      const waitDurationMs = withJitter(Math.max(baseDelay, retryAfterMs ?? 0));
+      nextAllowedRequestAt = Math.max(
+        nextAllowedRequestAt,
+        Date.now() + waitDurationMs
       );
-      nextAllowedRequestAt = Math.max(nextAllowedRequestAt, Date.now() + waitDurationMs);
       await sleep(waitDurationMs);
       continue;
     } catch (error) {
@@ -184,9 +189,12 @@ export async function fetchJsonWithRetry<T>(url: string): Promise<T> {
 
       const baseDelay = RETRY_DELAYS_MS[attempt] ?? RETRY_DELAYS_MS.at(-1) ?? 0;
       const retryAfterMs =
-        error instanceof NpmUpstreamError ? error.retryAfterMs ?? 0 : 0;
+        error instanceof NpmUpstreamError ? (error.retryAfterMs ?? 0) : 0;
       const waitDurationMs = withJitter(Math.max(baseDelay, retryAfterMs));
-      nextAllowedRequestAt = Math.max(nextAllowedRequestAt, Date.now() + waitDurationMs);
+      nextAllowedRequestAt = Math.max(
+        nextAllowedRequestAt,
+        Date.now() + waitDurationMs
+      );
       await sleep(waitDurationMs);
     } finally {
       clearTimeout(timeout);

@@ -24,7 +24,9 @@ function chunkPackages<T>(items: T[], size: number) {
   return chunks;
 }
 
-function toSortedDailySeries(merged: Map<string, number>): DailyDownloadPoint[] {
+function toSortedDailySeries(
+  merged: Map<string, number>
+): DailyDownloadPoint[] {
   return [...merged.entries()]
     .toSorted(([left], [right]) => left.localeCompare(right))
     .map(([date, downloads]) => ({ date, downloads }));
@@ -52,7 +54,9 @@ export async function GET(
             packageCount: packageNames.length,
             range: parsed.range,
             interval: parsed.interval,
-            totalChunks: Math.ceil(packageNames.length / AUTHOR_STREAM_CHUNK_SIZE),
+            totalChunks: Math.ceil(
+              packageNames.length / AUTHOR_STREAM_CHUNK_SIZE
+            ),
           })
         )
       );
@@ -63,7 +67,10 @@ export async function GET(
 
       try {
         for (const [chunkIndex, packageChunk] of chunks.entries()) {
-          const results = await loadPackagesHistoryShards(packageChunk, parsed.range);
+          const results = await loadPackagesHistoryShards(
+            packageChunk,
+            parsed.range
+          );
           const chunkMerged = new Map<string, number>();
           const packageDownloads: Record<string, number> = {};
 
@@ -91,7 +98,10 @@ export async function GET(
                 point.date,
                 (chunkMerged.get(point.date) ?? 0) + point.downloads
               );
-              merged.set(point.date, (merged.get(point.date) ?? 0) + point.downloads);
+              merged.set(
+                point.date,
+                (merged.get(point.date) ?? 0) + point.downloads
+              );
             }
           }
 

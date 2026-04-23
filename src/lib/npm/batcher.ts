@@ -208,10 +208,8 @@ async function fetchWindowChunk(packages: string[], window: ShardWindow) {
       const baseDelay =
         BATCH_RETRY_DELAYS_MS[attempt] ?? BATCH_RETRY_DELAYS_MS.at(-1) ?? 0;
       const retryAfterMs =
-        error instanceof NpmUpstreamError ? error.retryAfterMs ?? 0 : 0;
-      const waitDurationMs = withJitter(
-        Math.max(baseDelay, retryAfterMs)
-      );
+        error instanceof NpmUpstreamError ? (error.retryAfterMs ?? 0) : 0;
+      const waitDurationMs = withJitter(Math.max(baseDelay, retryAfterMs));
       await sleep(waitDurationMs);
     }
   }
