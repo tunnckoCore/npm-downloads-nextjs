@@ -1,0 +1,364 @@
+# The Chart Was Never the Hard Part
+
+The naive version is beautiful.
+
+Take a package name. Call the npm downloads API. Get daily counts. Draw a chart.
+
+```txt
+package + date range
+  → npm downloads API
+  → chart
+```
+
+For one package over a short range, that works. It is the kind of implementation you can ship before lunch.
+
+Then somebody searches for an author.
+
+Not a toy author with five packages. A real npm maintainer with hundreds of packages, scoped names, shared ownership, and years of history. The selected range crosses npm’s date limits. Bulk URLs get too long. npm returns `429` after the app has already done useful work.
+
+At that point, the chart is no longer the hard part.
+
+The hard part is turning a bounded, rate-limited upstream API into something that feels responsive while doing a large fan-out calculation.
+
+That is what this app is built around.
+
+```txt
+URL range
+  → safe date windows
+  → package/window cache lookup
+  → missing-package batches
+  → npm downloads API
+  → daily shards
+  → aggregation
+  → SSE chunks
+  → React chart + counts
+```
+
+The visible product is a search box and a chart. The actual product is the request-time pipeline behind it.
+
+## Cache the unit, not the screen
+
+The tempting cache key is the route.
+
+```txt
+/package/react?from=2024-01-01&to=2024-12-31
+/author/sindresorhus?from=2024-01-01&to=2024-12-31
+```
+
+That looks reasonable until you notice the overlap.
+
+A package page needs daily download history for one package. An author page needs daily download history for many packages, added together. If the cache is page-shaped, the app keeps throwing away the most reusable part of the work.
+
+So the reusable unit is smaller:
+
+```txt
+package + date window
+```
+
+In code, the key is boring on purpose:
+
+```ts
+function makeShardKey(packageName: string, window: ShardWindow) {
+  return `${packageName}:${window.from}:${window.to}`;
+}
+```
+
+One package. One bounded window. Daily downloads.
+
+A package page is a projection over one package’s shards. An author page is a projection over many packages’ shards. Author totals are derived data. Package-window history is the source material.
+
+That tiny distinction changes the product.
+
+If an author page loads downloads for a maintainer’s packages, it warms shards for every package in that aggregate. When the user clicks one package row, the package page asks for the same package and the same date windows. The package route does not need a special “came from author page” path. The cache key lines up naturally.
+
+The same thing works across authors. If two maintainers share a package, one author page can warm data that another author page later needs.
+
+That is the architecture: cache the thing that multiple screens can agree on.
+
+## npm gives us boundaries
+
+The npm downloads API has range limits. You cannot safely throw an arbitrary multi-year range upstream and hope for the best.
+
+The app plans the request first. It normalizes the selected range, then cuts it into conservative inclusive windows of up to 365 days.
+
+```ts
+while (start <= range.to) {
+  const end = min(shiftUtcDays(start, 364), range.to);
+
+  windows.push({ from: start, to: end });
+  start = shiftUtcDays(end, 1);
+}
+```
+
+Those windows matter for more than correctness. They make cache keys stable.
+
+If an author page and a package page preserve the same `from` and `to`, they ask for the same package/window shards. Same package. Same boundaries. Same chance to reuse work.
+
+The chart interval is a later projection. The app stores daily points underneath, then groups them for weekly, monthly, or yearly views.
+
+```txt
+daily package/window shard
+  → weekly buckets
+  → monthly buckets
+  → yearly buckets
+```
+
+Changing the interval should not mean asking npm for the same raw history again. It should mean regrouping data the app already has.
+
+## Batching is reconciliation
+
+The naive author algorithm is brutal:
+
+```txt
+for every package
+  for every date window
+    fetch from npm
+```
+
+Simple. Also a good way to build a rate-limit generator.
+
+The app treats author loading as reconciliation instead. For each date window, it checks which package shards already exist, builds a missing set, and hydrates only that missing set.
+
+```ts
+const missingPackages = packages.filter((name) => {
+  return !cache.has(makeShardKey(name, window));
+});
+```
+
+That one step changes the posture of the system.
+
+The app is not saying, “Load this author from scratch.”
+
+It is saying, “Reconcile this author against the package history we already know.”
+
+The batching layer still has to respect npm’s shape. Bulk URLs cannot grow forever. Scoped packages get isolated into safer single-package chunks. Equivalent batches use stable keys. Upstream calls run with low concurrency, timeouts, retries, jitter, `Retry-After` support, and a shared cooldown after rate limits.
+
+| Pressure | Response |
+| --- | --- |
+| npm range limits | split into package/date windows |
+| huge authors | hydrate only missing shards |
+| long bulk URLs | split by encoded URL length |
+| scoped packages | handle conservatively as single-package chunks |
+| duplicate traffic | dedupe in-flight batches |
+| `429` and transient failures | retry, back off, honor `Retry-After`, cool down |
+
+The goal is not maximum parallelism.
+
+The goal is maximum useful progress without pretending npm is an infinitely parallel database.
+
+## Streams make slow work useful
+
+Server-Sent Events do not make npm faster.
+
+They make partial truth renderable.
+
+That distinction matters. The data is still historical npm download data. SSE just lets the server send useful chunks while a large calculation is still running.
+
+The stream vocabulary is intentionally small:
+
+```txt
+meta
+series_chunk
+series_chunk
+...
+done | stream_error
+```
+
+Package pages stream by date window. That matches the workload: one package, maybe many years.
+
+Author pages stream by package chunk. That matches a different workload: many packages over the same selected range.
+
+A simplified author chunk looks like this:
+
+```ts
+type AuthorSeriesChunk = {
+  packageDownloads: Record<string, number>;
+  series: AggregatedSeriesPoint[];
+  summary: DownloadsSummary;
+  progress: {
+    loadedChunks: number;
+    totalChunks: number;
+  };
+};
+```
+
+A chunk does not need to be the final answer. It only needs to be useful.
+
+For a large author, the headline total starts moving. The chart gets shape. Package rows switch from `Counting…` to real download counts as chunks arrive.
+
+That is the difference between a dashboard and a report generator.
+
+A report generator says, “Wait until I know everything.”
+
+A dashboard says, “Here is what I know so far.”
+
+## State should live as long as the work
+
+Package streams are route-sized. A package page can own its `EventSource`, fold chunks into component state, and write useful payloads into React Query so client transitions stay smooth.
+
+Author streams are different.
+
+An author calculation can involve hundreds of packages. If the user starts loading an author, clicks into a package, and then goes back, killing the author stream on unmount would waste exactly the work the pipeline is trying to preserve.
+
+So author downloads live outside the page component.
+
+A global Zustand store tracks visible state. A module-level runtime map owns active streams. `sessionStorage` preserves partial and completed author payloads inside the same browser session.
+
+The route subscribes to a key. It does not own the lifetime of the expensive computation.
+
+```ts
+function makeAuthorDownloadsCacheKey(
+  author: string,
+  from: string,
+  to: string,
+  interval: Interval
+) {
+  return ["author-downloads", author, from, to, interval].join(":");
+}
+```
+
+When the component unmounts during client-side navigation, it unsubscribes. The stream can keep accumulating. When the user returns, the page re-subscribes to the same key and renders whatever arrived while they were gone.
+
+This is not global state because global state is convenient.
+
+It is global state because the work outlives the route.
+
+There is a cost. Module state is browser-session local. `sessionStorage` is not durable infrastructure. A hard reset, another device, or a new deployment does not inherit that work.
+
+That is fine. The goal here is same-session continuity, not pretending the browser is a database.
+
+## URL state is cache coordination
+
+The selected `from`, `to`, and `interval` values live in the URL.
+
+That gives the obvious wins: shareable links, reload-safe filters, and normal browser history. It also keeps the cache aligned across navigation.
+
+When an author package row links to a package page, it carries the same query state forward:
+
+```tsx
+const query = new URLSearchParams({
+  from,
+  to,
+  interval,
+}).toString();
+
+<Link href={`/package/${encodePackagePath(packageName)}?${query}`}>
+  {packageName}
+</Link>
+```
+
+That means the package page asks for the same range the author page just used. Same package. Same safe windows. Same shard keys.
+
+Without URL-backed state, routes would drift. One page would load January through December. Another would fall back to a default range. The cache might be warm, but the next route would miss it because the computation no longer describes the same work.
+
+The URL is not just UI state here. It is part of the cache protocol.
+
+## Partial failure is product state
+
+Rate limits happen.
+
+Timeouts happen.
+
+npm can fail after the app has already processed useful data.
+
+For a large author page, throwing away partial results is the worst possible response. If 600 packages have been counted and package 601 hits a `429`, the UI should not erase the chart and pretend nothing happened.
+
+Partial success is still success.
+
+```txt
+better failure:
+  keep partial chart
+  keep known package totals
+  mark the result incomplete
+  explain the upstream limit
+
+worse failure:
+  erase everything
+  show an empty chart
+  make the user restart
+```
+
+The author runtime preserves partial payloads on late failures. Production-ish upstream errors get normalized into messages a person can understand, like:
+
+```txt
+npm is rate-limiting this request. Showing partial results.
+```
+
+That is not hiding the error. It is refusing to convert partial success into total failure.
+
+A serious analytics UI needs to represent incomplete data without collapsing.
+
+## The cache is layered because reuse is layered
+
+There is no single magic cache in this app.
+
+Server-side shard caches reduce npm traffic while a runtime is warm. In-flight maps dedupe concurrent requests for the same batch. HTTP cache headers help completed JSON responses. React Query smooths package-page transitions. The Zustand author runtime keeps long-running stream state alive during client navigation. `sessionStorage` restores partial author progress inside the same browser session.
+
+Those layers are not interchangeable.
+
+```txt
+server caches:
+  avoid asking npm again
+
+client caches:
+  avoid making this user start over
+```
+
+That distinction matters in a serverless Next.js app.
+
+Process memory is fast, but not durable. Browser state is responsive, but not shared. HTTP caching helps completed payloads, but it cannot represent an in-progress stream.
+
+Stacking these layers is less elegant than naming one magic cache.
+
+It is also more honest.
+
+## Why the Next.js pages stay thin
+
+The App Router pages mostly identify what the user wants.
+
+The package page verifies the package, fetches lightweight metadata, and renders the client shell. The author page resolves the maintainer’s package list and renders the author client. The expensive historical analytics work lives behind internal route handlers where it can be cached, retried, streamed, and consumed progressively.
+
+```txt
+Server Components
+  → route identity, metadata, initial validation
+
+Route Handlers
+  → npm integration, sharding, batching, JSON, SSE
+
+Client Components
+  → URL state, charts, transitions, background continuity
+```
+
+Doing the whole download calculation inside a Server Component would make the tree look simpler. It would also make large author pages feel worse, because the user would wait for a full aggregate before seeing anything useful.
+
+The app chooses progressive truth over blocking completeness.
+
+## Tradeoffs, because there are always tradeoffs
+
+This design has more moving parts than a single fetch in a page.
+
+The batching code has to respect URL length, scoped package behavior, and rate limits. The author runtime has lifecycle complexity. Partial results require honest UI states. Process-local caches are fast but not durable across cold starts, regions, or deployments.
+
+A more serious backend could add Redis, Postgres, SQLite/libSQL, or a job queue keyed by package/date shard. That would improve cross-runtime reuse and make long author jobs more durable. It would also make the project heavier.
+
+WebSockets could work too, but this workload is one-way progress from server to browser. SSE is enough, simpler, and maps cleanly to the request.
+
+So the app stays deliberately small. It uses the browser for same-session continuity, route handlers for progressive work, and npm-aware sharding to keep the upstream pressure sane.
+
+Not perfect. Practical.
+
+## The shape that holds up
+
+npm download analytics looks like a chart problem until the subject gets large.
+
+Then it becomes a systems problem with a chart at the end.
+
+The winning shape is package/date shards, not page caches. Safe date windows, not arbitrary upstream ranges. Missing-package batching, not blind loops. Limited concurrency, not API stampedes. SSE for progressive delivery, not fake live data. URL query params as cache alignment, not decoration. Zustand for author stream continuity, not casual global state. Partial failure as a valid UI state, not an exception path that nukes the screen.
+
+That is why the app can make large author pages feel fast without pretending npm has different constraints than it actually has.
+
+The chart is still the fun part.
+
+It is just not the part doing the heavy lifting.
+
+For the source, see the [GitHub repository](https://github.com/tunnckoCore/npm-downloads-nextjs). The data ultimately comes from the [npm downloads API](https://api.npmjs.org).

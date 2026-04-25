@@ -12,8 +12,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 
-import { ThemePresetSwitcher } from "@/components/theme-preset-switcher";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { HeaderControls } from "@/components/header-controls";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -233,10 +232,7 @@ export function SubjectSearch({
           </p>
         </div>
 
-        <div className="flex w-full items-center gap-2 sm:w-auto">
-          <ThemePresetSwitcher />
-          <ThemeToggle />
-        </div>
+        <HeaderControls />
       </div>
 
       <SearchForm
